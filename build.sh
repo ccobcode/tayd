@@ -21,8 +21,8 @@ build_darwin() {
 		"$cargo_bin" build --release
 	fi
 	darwin_arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-	cp target/release/tayc "bin/tayc-darwin-$darwin_arch"
-	cp target/release/tayd "bin/tayd-darwin-$darwin_arch"
+	/usr/bin/install -S -m 755 target/release/tayc "bin/tayc-darwin-$darwin_arch"
+	/usr/bin/install -S -m 755 target/release/tayd "bin/tayd-darwin-$darwin_arch"
 
 	if rustup target list --installed | grep -F x86_64-apple-darwin >/dev/null 2>&1; then
 		if [ -n "$rustc_bin" ]; then
@@ -30,8 +30,8 @@ build_darwin() {
 		else
 			"$cargo_bin" build --release --target x86_64-apple-darwin
 		fi
-		cp target/x86_64-apple-darwin/release/tayc bin/tayc-darwin-amd64
-		cp target/x86_64-apple-darwin/release/tayd bin/tayd-darwin-amd64
+		/usr/bin/install -S -m 755 target/x86_64-apple-darwin/release/tayc bin/tayc-darwin-amd64
+		/usr/bin/install -S -m 755 target/x86_64-apple-darwin/release/tayd bin/tayd-darwin-amd64
 	fi
 }
 

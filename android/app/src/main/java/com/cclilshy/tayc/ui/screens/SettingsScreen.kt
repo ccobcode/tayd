@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.cclilshy.tayc.BuildConfig
 import com.cclilshy.tayc.R
 import com.cclilshy.tayc.ui.NetworkInterfaceUiState
 import com.cclilshy.tayc.ui.TaycUiState
@@ -118,7 +119,7 @@ fun SettingsScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.weight(1f))
-                        StatusBadge("0.1.0")
+                        StatusBadge(BuildConfig.VERSION_NAME)
                     }
                     Text(
                         text = stringResource(R.string.about_description),
