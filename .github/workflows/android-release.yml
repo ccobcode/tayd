@@ -54,8 +54,8 @@ jobs:
                   ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
               run: android/scripts/ci/prepare-signing-key.sh
 
-            - name: Build signed release APK
-              run: gradle -p android :app:assembleRelease --no-daemon
+            - name: Test and build signed release APK
+              run: gradle -p android :app:testDebugUnitTest :app:assembleRelease --no-daemon
 
             - name: Prepare release asset
               id: asset
