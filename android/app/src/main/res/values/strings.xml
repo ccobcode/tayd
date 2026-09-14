@@ -21,15 +21,14 @@
     <string name="no_events_yet">No events yet</string>
 
     <string name="quick_access">Quick access</string>
-    <string name="primary_local_endpoints">Your primary local endpoints</string>
     <string name="view_all">View all</string>
     <string name="gateway_overview">Gateway overview</string>
     <string name="gateway_running">Gateway running</string>
     <string name="gateway_stopped">Gateway stopped</string>
-    <string name="everything_connected">Everything connected</string>
-    <string name="ready_when_you_are">Ready when you are</string>
-    <string name="home_running_description">Local services are available through one private gateway.</string>
-    <string name="home_stopped_description">Review your services, then start the gateway when ready.</string>
+    <string name="everything_connected">Services ready</string>
+    <string name="ready_when_you_are">Ready to start</string>
+    <string name="home_running_description">Local services, one gateway.</string>
+    <string name="home_stopped_description">Check services and start.</string>
     <string name="enabled">enabled</string>
     <string name="services">services</string>
     <string name="start">Start</string>
@@ -38,7 +37,7 @@
     <string name="status_running">Running</string>
     <string name="gateway_failed">Gateway failed: %1$s</string>
     <string name="background_protection_off">Background protection is off</string>
-    <string name="enable_service_notification_hint">Tap to enable the service notification.</string>
+    <string name="enable_service_notification_hint">Tap to enable notifications.</string>
     <string name="runtime">Runtime</string>
     <string name="gateway">Gateway</string>
     <string name="active">Active</string>
@@ -97,8 +96,13 @@
     <string name="add_webhook">Add WebHook</string>
     <string name="edit_webhook">Edit WebHook</string>
     <string name="target_url">Target URL</string>
-    <string name="proxy_url_optional">Proxy URL (optional)</string>
+    <string name="proxy_url_optional">HTTP proxy URL (optional)</string>
     <string name="save_channel">Save channel</string>
+    <string name="javascript_optional">JavaScript (optional)</string>
+    <string name="javascript_contract">Return {event, channel}. event is the POST body.</string>
+    <string name="javascript_too_long">Maximum %1$d characters</string>
+    <string name="insert_script_template">Insert template</string>
+    <string name="feedback_invalid_webhook_script">Script error: %1$s</string>
     <string name="events">Events</string>
     <string name="extension_logs">%1$s logs</string>
 

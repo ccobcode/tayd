@@ -63,6 +63,7 @@ data class WebhookChannelUiState(
     val name: String,
     val targetUrl: String,
     val proxyUrl: String,
+    val script: String,
 )
 
 @Immutable
@@ -102,6 +103,7 @@ data class WebhookChannelForm(
     val name: String,
     val targetUrl: String,
     val proxyUrl: String,
+    val script: String,
 )
 
 @Immutable

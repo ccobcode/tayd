@@ -41,6 +41,7 @@ import com.cclilshy.tayc.ui.WebhookChannelUiState
 import com.cclilshy.tayc.webhook.data.WebhookChannelStore
 import com.cclilshy.tayc.webhook.domain.WebhookChannel
 import com.cclilshy.tayc.webhook.runtime.WebhookDispatcher
+import com.cclilshy.tayc.webhook.runtime.WebhookScriptProcessor
 
 class GatewayViewModel(application: Application) : AndroidViewModel(application) {
     private val app = getApplication<Application>()
@@ -194,8 +195,13 @@ class GatewayViewModel(application: Application) : AndroidViewModel(application)
         if (GatewayRuntimeState.isActive()) {
             return UiFeedback.error(text(R.string.feedback_stop_before_webhooks))
         }
+        try {
+            WebhookScriptProcessor.validate(form.script)
+        } catch (err: IllegalArgumentException) {
+            return UiFeedback.error(text(R.string.feedback_invalid_webhook_script, err.message.orEmpty()))
+        }
         return try {
-            val channel = WebhookChannel(form.name, form.targetUrl, form.proxyUrl)
+            val channel = WebhookChannel(form.name, form.targetUrl, form.proxyUrl, form.script)
             var stored = GatewayPrefs.getString(prefs, GatewayPrefs.KEY_WEBHOOK_CHANNELS, "")
             if (previousName != null && previousName != channel.name) {
                 stored = WebhookChannelStore.remove(stored, previousName)
@@ -414,7 +420,7 @@ class GatewayViewModel(application: Application) : AndroidViewModel(application)
         val channels = WebhookChannelStore.parse(
             GatewayPrefs.getString(prefs, GatewayPrefs.KEY_WEBHOOK_CHANNELS, ""),
         ).map { channel ->
-            WebhookChannelUiState(channel.name, channel.targetUrl, channel.proxyUrl)
+            WebhookChannelUiState(channel.name, channel.targetUrl, channel.proxyUrl, channel.script)
         }
 
         val eventOptions = listOf(

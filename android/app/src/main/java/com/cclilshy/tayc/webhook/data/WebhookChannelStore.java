@@ -27,7 +27,8 @@ public final class WebhookChannelStore {
                 channels.add(new WebhookChannel(
                         fields.get(0),
                         fields.get(1),
-                        fields.size() > 2 ? fields.get(2) : ""));
+                        fields.size() > 2 ? fields.get(2) : "",
+                        fields.size() > 3 ? fields.get(3) : ""));
             } catch (IllegalArgumentException ignored) {
                 // Ignore corrupt persisted rows so one bad channel does not hide the whole list.
             }
@@ -51,7 +52,9 @@ public final class WebhookChannelStore {
                     .append('\t')
                     .append(escape(channel.getTargetUrl()))
                     .append('\t')
-                    .append(escape(channel.getProxyUrl()));
+                    .append(escape(channel.getProxyUrl()))
+                    .append('\t')
+                    .append(escape(channel.getScript()));
         }
         return out.toString();
     }
@@ -103,6 +106,8 @@ public final class WebhookChannelStore {
                 out.append("\\t");
             } else if (ch == '\n') {
                 out.append("\\n");
+            } else if (ch == '\r') {
+                out.append("\\r");
             } else {
                 out.append(ch);
             }
@@ -121,6 +126,8 @@ public final class WebhookChannelStore {
                     current.append('\t');
                 } else if (ch == 'n') {
                     current.append('\n');
+                } else if (ch == 'r') {
+                    current.append('\r');
                 } else {
                     current.append(ch);
                 }

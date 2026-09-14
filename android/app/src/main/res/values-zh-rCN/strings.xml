@@ -21,15 +21,14 @@
     <string name="no_events_yet">暂无事件</string>
 
     <string name="quick_access">快捷访问</string>
-    <string name="primary_local_endpoints">常用本地端点</string>
     <string name="view_all">查看全部</string>
     <string name="gateway_overview">网关概览</string>
     <string name="gateway_running">网关运行中</string>
     <string name="gateway_stopped">网关已停止</string>
-    <string name="everything_connected">所有服务已连接</string>
-    <string name="ready_when_you_are">一切准备就绪</string>
-    <string name="home_running_description">本地服务正在通过一个私有网关提供访问。</string>
-    <string name="home_stopped_description">检查服务配置，准备好后启动网关。</string>
+    <string name="everything_connected">服务已就绪</string>
+    <string name="ready_when_you_are">准备启动</string>
+    <string name="home_running_description">本地服务，统一连接。</string>
+    <string name="home_stopped_description">确认服务后即可启动。</string>
     <string name="enabled">已启用</string>
     <string name="services">项服务</string>
     <string name="start">启动</string>
@@ -38,7 +37,7 @@
     <string name="status_running">运行中</string>
     <string name="gateway_failed">网关运行失败：%1$s</string>
     <string name="background_protection_off">后台保护未开启</string>
-    <string name="enable_service_notification_hint">点按以启用服务通知。</string>
+    <string name="enable_service_notification_hint">点按启用服务通知。</string>
     <string name="runtime">运行状态</string>
     <string name="gateway">网关</string>
     <string name="active">活跃</string>
@@ -97,8 +96,13 @@
     <string name="add_webhook">添加 WebHook</string>
     <string name="edit_webhook">编辑 WebHook</string>
     <string name="target_url">目标 URL</string>
-    <string name="proxy_url_optional">代理 URL（可选）</string>
+    <string name="proxy_url_optional">HTTP 代理 URL（可选）</string>
     <string name="save_channel">保存频道</string>
+    <string name="javascript_optional">JavaScript（可选）</string>
+    <string name="javascript_contract">返回 {event, channel}，event 即请求体。</string>
+    <string name="javascript_too_long">最多 %1$d 个字符</string>
+    <string name="insert_script_template">插入模板</string>
+    <string name="feedback_invalid_webhook_script">脚本错误：%1$s</string>
     <string name="events">事件</string>
     <string name="extension_logs">%1$s 日志</string>
 

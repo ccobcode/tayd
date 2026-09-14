@@ -1,6 +1,6 @@
 package com.cclilshy.tayc.webhook.net;
 
-import com.cclilshy.tayc.webhook.domain.WebhookChannel;
+import com.cclilshy.tayc.webhook.domain.WebhookRequest;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -12,47 +12,56 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Map;
 
 public final class WebhookClient {
-    private static final String JSON_CONTENT_TYPE = "application/json; charset=utf-8";
-
     private WebhookClient() {
     }
 
     public static String jsonContentType() {
-        return JSON_CONTENT_TYPE;
+        return WebhookRequest.JSON_CONTENT_TYPE;
     }
 
-    public static int postJson(WebhookChannel channel, String json) throws IOException {
-        URL url = new URL(channel.getTargetUrl());
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection(proxyFor(channel));
-        connection.setConnectTimeout(5000);
-        connection.setReadTimeout(5000);
-        connection.setRequestMethod("POST");
-        connection.setDoOutput(true);
-        connection.setRequestProperty("Content-Type", JSON_CONTENT_TYPE);
-        connection.setRequestProperty("Accept", "application/json");
-        String proxyAuthorization = proxyAuthorizationHeader(channel.getProxyUrl());
-        if (!proxyAuthorization.isEmpty()) {
-            connection.setRequestProperty("Proxy-Authorization", proxyAuthorization);
+    public static int postJson(WebhookRequest request) throws IOException {
+        WebhookRequest.Channel channel = request.getChannel();
+        URL url = new URL(channel.getUrl());
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection(proxyFor(channel.getProxyUrl()));
+        try {
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
+            connection.setInstanceFollowRedirects(false);
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            for (Map.Entry<String, String> header : channel.getHeaders().entrySet()) {
+                connection.setRequestProperty(header.getKey(), header.getValue());
+            }
+            String proxyAuthorization = proxyAuthorizationHeader(channel.getProxyUrl());
+            if (!proxyAuthorization.isEmpty()) {
+                connection.setRequestProperty("Proxy-Authorization", proxyAuthorization);
+            }
+            byte[] body = request.getEventJson().getBytes(StandardCharsets.UTF_8);
+            connection.setFixedLengthStreamingMode(body.length);
+            try (OutputStream stream = connection.getOutputStream()) {
+                stream.write(body);
+            }
+            return connection.getResponseCode();
+        } finally {
+            connection.disconnect();
         }
-        byte[] body = (json == null ? "{}" : json).getBytes(StandardCharsets.UTF_8);
-        connection.setFixedLengthStreamingMode(body.length);
-        try (OutputStream stream = connection.getOutputStream()) {
-            stream.write(body);
-        }
-        int code = connection.getResponseCode();
-        connection.disconnect();
-        return code;
     }
 
-    private static Proxy proxyFor(WebhookChannel channel) throws IOException {
-        String proxyUrl = channel.getProxyUrl();
+    private static Proxy proxyFor(String proxyUrl) throws IOException {
         if (proxyUrl == null || proxyUrl.trim().isEmpty()) {
             return Proxy.NO_PROXY;
         }
         URL url = new URL(proxyUrl);
-        int port = url.getPort() > 0 ? url.getPort() : defaultPort(url.getProtocol());
+        if (!"http".equals(url.getProtocol())) {
+            throw new IOException("proxyUrl must use http; TLS connections to proxies are not supported");
+        }
+        int port = url.getPort() >= 0 ? url.getPort() : 80;
+        if (port == 0 || port > 65535) {
+            throw new IOException("invalid proxy port");
+        }
         return new Proxy(Proxy.Type.HTTP, new InetSocketAddress(url.getHost(), port));
     }
 
@@ -69,15 +78,5 @@ public final class WebhookClient {
         } catch (URISyntaxException err) {
             throw new IOException("invalid proxy URL", err);
         }
-    }
-
-    private static int defaultPort(String protocol) throws IOException {
-        if ("http".equals(protocol)) {
-            return 80;
-        }
-        if ("https".equals(protocol)) {
-            return 443;
-        }
-        throw new IOException("unsupported proxy protocol");
     }
 }

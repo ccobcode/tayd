@@ -4,6 +4,7 @@ import com.cclilshy.tayc.event.data.EventWebhookSubscriptionStore;
 import com.cclilshy.tayc.webhook.net.WebhookClient;
 import com.cclilshy.tayc.webhook.data.WebhookChannelStore;
 import com.cclilshy.tayc.webhook.domain.WebhookChannel;
+import com.cclilshy.tayc.webhook.domain.WebhookRequest;
 import com.cclilshy.tayc.gateway.data.GatewayLogStore;
 import com.cclilshy.tayc.gateway.data.GatewayPrefs;
 import com.cclilshy.tayc.R;
@@ -52,7 +53,9 @@ public final class WebhookDispatcher {
 
     private static void post(Context context, WebhookChannel channel, String json) {
         try {
-            int code = WebhookClient.postJson(channel, json);
+            WebhookRequest request = WebhookRequest.from(channel, json);
+            WebhookRequest processed = WebhookScriptProcessor.process(channel.getScript(), request);
+            int code = WebhookClient.postJson(processed);
             if (code < 200 || code >= 300) {
                 GatewayLogStore.append(
                         GatewayPrefs.get(context),

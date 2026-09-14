@@ -4,16 +4,23 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 public final class WebhookChannel {
+    public static final int MAX_SCRIPT_LENGTH = 32768;
+
     private final String name;
     private final String targetUrl;
     private final String proxyUrl;
+    private final String script;
 
-    public WebhookChannel(String name, String targetUrl, String proxyUrl) {
+    public WebhookChannel(String name, String targetUrl, String proxyUrl, String script) {
         this.name = requireName(name);
         this.targetUrl = requireHttpUrl(targetUrl, "targetUrl");
         this.proxyUrl = proxyUrl == null || proxyUrl.trim().isEmpty()
                 ? ""
                 : requireHttpUrl(proxyUrl, "proxyUrl");
+        this.script = script == null ? "" : script;
+        if (this.script.length() > MAX_SCRIPT_LENGTH) {
+            throw new IllegalArgumentException("webhook script is too long");
+        }
     }
 
     public String getName() {
@@ -28,7 +35,11 @@ public final class WebhookChannel {
         return proxyUrl;
     }
 
-    private static String requireName(String value) {
+    public String getScript() {
+        return script;
+    }
+
+    static String requireName(String value) {
         String trimmed = value == null ? "" : value.trim();
         if (trimmed.isEmpty() || trimmed.contains("\t") || trimmed.contains("\n")) {
             throw new IllegalArgumentException("invalid webhook channel name");
@@ -36,7 +47,7 @@ public final class WebhookChannel {
         return trimmed;
     }
 
-    private static String requireHttpUrl(String value, String field) {
+    static String requireHttpUrl(String value, String field) {
         String trimmed = value == null ? "" : value.trim();
         try {
             URL url = new URL(trimmed);

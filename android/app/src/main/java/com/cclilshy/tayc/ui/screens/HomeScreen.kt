@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.cclilshy.tayc.R
@@ -56,11 +57,11 @@ fun HomeScreen(
         modifier = modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
             start = 16.dp,
-            top = 8.dp,
+            top = 6.dp,
             end = 16.dp,
-            bottom = 28.dp,
+            bottom = 24.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
             GatewayHero(
@@ -80,13 +81,12 @@ fun HomeScreen(
         item {
             SectionHeading(
                 title = stringResource(R.string.quick_access),
-                supportingText = stringResource(R.string.primary_local_endpoints),
                 action = {
                     androidx.compose.material3.TextButton(onClick = onOpenServices) {
                         Text(stringResource(R.string.view_all))
                     }
                 },
-                modifier = Modifier.padding(top = 8.dp, start = 4.dp),
+                modifier = Modifier.padding(top = 4.dp, start = 4.dp),
             )
         }
 
@@ -97,7 +97,7 @@ fun HomeScreen(
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 quick.forEach { extension ->
                     QuickServiceCard(
@@ -112,7 +112,7 @@ fun HomeScreen(
         item {
             SectionHeading(
                 title = stringResource(R.string.gateway_overview),
-                modifier = Modifier.padding(top = 8.dp, start = 4.dp),
+                modifier = Modifier.padding(top = 4.dp, start = 4.dp),
             )
         }
 
@@ -146,7 +146,7 @@ private fun GatewayHero(
                 .size(170.dp)
                 .background(Color.White.copy(alpha = 0.1f), CircleShape),
         )
-        Column(modifier = Modifier.padding(22.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -166,7 +166,7 @@ private fun GatewayHero(
                 )
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(10.dp))
             Text(
                 text = stringResource(
                     if (running) R.string.everything_connected else R.string.ready_when_you_are,
@@ -185,13 +185,13 @@ private fun GatewayHero(
                 modifier = Modifier.padding(top = 5.dp),
             )
 
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(14.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     HeroMetric(enabledCount.toString(), stringResource(R.string.enabled))
                     HeroMetric(serviceCount.toString(), stringResource(R.string.services))
                 }
@@ -281,22 +281,20 @@ private fun QuickServiceCard(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        Column(modifier = Modifier.padding(15.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             ServiceLeadingIcon(extension.id)
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = extension.title,
                 style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = extension.endpointSummary,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 3.dp),
             )
         }
     }
@@ -309,9 +307,9 @@ private fun OverviewCard(state: TaycUiState) {
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        Column(modifier = Modifier.padding(17.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             Text(stringResource(R.string.runtime), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             OverviewRow(
                 stringResource(R.string.gateway),
                 stringResource(if (state.running) R.string.active else R.string.inactive),
@@ -337,7 +335,7 @@ private fun OverviewRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(

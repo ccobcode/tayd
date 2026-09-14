@@ -2,15 +2,24 @@ package com.cclilshy.tayc.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.ExperimentalMaterial3AdaptiveNavigationSuiteApi
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,6 +29,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.cclilshy.tayc.R
@@ -44,6 +55,14 @@ private enum class RootDestination(
     Settings(R.string.nav_settings, R.drawable.ic_settings_24),
 }
 
+@Composable
+private fun MutableInteractionSource.isInteracting(): Boolean {
+    val focused by collectIsFocusedAsState()
+    val hovered by collectIsHoveredAsState()
+    val pressed by collectIsPressedAsState()
+    return focused || hovered || pressed
+}
+
 @OptIn(
     ExperimentalMaterial3Api::class,
     ExperimentalMaterial3AdaptiveNavigationSuiteApi::class,
@@ -54,6 +73,22 @@ fun TaycApp(
     actions: TaycActions,
 ) {
     var root by rememberSaveable { mutableStateOf(RootDestination.Home) }
+    val homeNavigationInteractionSource = remember { MutableInteractionSource() }
+    val servicesNavigationInteractionSource = remember { MutableInteractionSource() }
+    val settingsNavigationInteractionSource = remember { MutableInteractionSource() }
+    val homeNavigationInteracting = homeNavigationInteractionSource.isInteracting()
+    val servicesNavigationInteracting = servicesNavigationInteractionSource.isInteracting()
+    val settingsNavigationInteracting = settingsNavigationInteractionSource.isInteracting()
+    val navigationItemShape = MaterialTheme.shapes.large
+    val selectedNavigationItemColor = MaterialTheme.colorScheme.secondaryContainer
+    val interactedNavigationItemColor = selectedNavigationItemColor.copy(alpha = 0.56f)
+    val navigationItemColors = NavigationSuiteDefaults.itemColors(
+        navigationBarItemColors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent),
+        navigationRailItemColors = NavigationRailItemDefaults.colors(indicatorColor = Color.Transparent),
+        navigationDrawerItemColors = NavigationDrawerItemDefaults.colors(
+            selectedContainerColor = Color.Transparent,
+        ),
+    )
     var extensionId by rememberSaveable { mutableStateOf<String?>(null) }
     var networkOpen by rememberSaveable { mutableStateOf(false) }
     var logKey by rememberSaveable { mutableStateOf<String?>(null) }
@@ -84,6 +119,21 @@ fun TaycApp(
         NavigationSuiteScaffold(
             navigationSuiteItems = {
                 RootDestination.entries.forEach { destination ->
+                    val interactionSource = when (destination) {
+                        RootDestination.Home -> homeNavigationInteractionSource
+                        RootDestination.Services -> servicesNavigationInteractionSource
+                        RootDestination.Settings -> settingsNavigationInteractionSource
+                    }
+                    val isInteracting = when (destination) {
+                        RootDestination.Home -> homeNavigationInteracting
+                        RootDestination.Services -> servicesNavigationInteracting
+                        RootDestination.Settings -> settingsNavigationInteracting
+                    }
+                    val backgroundColor = when {
+                        root == destination -> selectedNavigationItemColor
+                        isInteracting -> interactedNavigationItemColor
+                        else -> Color.Transparent
+                    }
                     item(
                         selected = root == destination,
                         onClick = { root = destination },
@@ -94,6 +144,11 @@ fun TaycApp(
                             )
                         },
                         label = { Text(stringResource(destination.labelRes)) },
+                        modifier = Modifier
+                            .clip(navigationItemShape)
+                            .background(backgroundColor),
+                        colors = navigationItemColors,
+                        interactionSource = interactionSource,
                     )
                 }
             },

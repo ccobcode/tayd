@@ -35,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -66,6 +67,7 @@ import com.cclilshy.tayc.ui.UiFeedback
 import com.cclilshy.tayc.ui.WebhookChannelForm
 import com.cclilshy.tayc.ui.WebhookChannelUiState
 import com.cclilshy.tayc.ui.components.EmptyState
+import com.cclilshy.tayc.ui.components.JavaScriptEditor
 import com.cclilshy.tayc.ui.components.SectionHeading
 import com.cclilshy.tayc.ui.components.ServiceLeadingIcon
 import com.cclilshy.tayc.ui.components.StatusBadge
@@ -516,10 +518,26 @@ private fun ExtensionHero(extension: ExtensionUiState, running: Boolean) {
             ServiceLeadingIcon(extension.id)
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = extension.endpointSummary,
-                    style = MaterialTheme.typography.titleMedium,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = extension.endpointSummary,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    StatusBadge(
+                        label = when {
+                            running && extension.enabled -> stringResource(R.string.running)
+                            extension.enabled -> stringResource(R.string.ready)
+                            else -> stringResource(R.string.off)
+                        },
+                        active = extension.enabled,
+                    )
+                }
                 Text(
                     text = extension.description,
                     style = MaterialTheme.typography.bodySmall,
@@ -528,14 +546,6 @@ private fun ExtensionHero(extension: ExtensionUiState, running: Boolean) {
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            StatusBadge(
-                label = when {
-                    running && extension.enabled -> stringResource(R.string.running)
-                    extension.enabled -> stringResource(R.string.ready)
-                    else -> stringResource(R.string.off)
-                },
-                active = extension.enabled,
-            )
         }
     }
 }
@@ -852,7 +862,21 @@ private fun WebhookCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(channel.name, style = MaterialTheme.typography.titleMedium)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        channel.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (channel.script.isNotBlank()) {
+                        StatusBadge("JS", active = true)
+                    }
+                }
                 Text(
                     channel.targetUrl,
                     style = MaterialTheme.typography.bodySmall,
@@ -890,8 +914,10 @@ private fun WebhookSheet(
     var name by rememberSaveable(channel?.name) { mutableStateOf(channel?.name.orEmpty()) }
     var targetUrl by rememberSaveable(channel?.name) { mutableStateOf(channel?.targetUrl.orEmpty()) }
     var proxyUrl by rememberSaveable(channel?.name) { mutableStateOf(channel?.proxyUrl.orEmpty()) }
+    var script by rememberSaveable(channel?.name) { mutableStateOf(channel?.script.orEmpty()) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -907,9 +933,10 @@ private fun WebhookSheet(
             OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.field_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(targetUrl, { targetUrl = it }, label = { Text(stringResource(R.string.target_url)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(proxyUrl, { proxyUrl = it }, label = { Text(stringResource(R.string.proxy_url_optional)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            JavaScriptEditor(script, { script = it }, modifier = Modifier.fillMaxWidth())
             Button(
                 onClick = {
-                    onSave(channel?.name, WebhookChannelForm(name, targetUrl, proxyUrl))
+                    onSave(channel?.name, WebhookChannelForm(name, targetUrl, proxyUrl, script))
                 },
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 15.dp),
