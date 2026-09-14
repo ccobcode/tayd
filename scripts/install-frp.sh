@@ -1,13 +1,19 @@
 #!/bin/sh
 set -eu
 
-INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayd"}
 FRP_VERSION=${FRP_VERSION:-0.69.0}
+COMPONENT=${1:-}
 
 die() {
     echo "ERROR: $*" >&2
     exit 1
 }
+
+case "$COMPONENT" in
+frpc) INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayc-client"} ;;
+frps) INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayd-server"} ;;
+*) die "usage: install-frp.sh <frpc|frps>" ;;
+esac
 
 install_binary() {
     src=$1
@@ -60,5 +66,4 @@ mkdir -p "$INSTALL_DIR/bin"
 frp_dir=$(find "$tmp_dir" -type d -name "frp_${FRP_VERSION}_${target}" | head -n 1)
 [ -n "$frp_dir" ] || die "could not find extracted FRP directory"
 
-install_binary "$frp_dir/frpc" "$INSTALL_DIR/bin/frpc"
-install_binary "$frp_dir/frps" "$INSTALL_DIR/bin/frps"
+install_binary "$frp_dir/$COMPONENT" "$INSTALL_DIR/bin/$COMPONENT"

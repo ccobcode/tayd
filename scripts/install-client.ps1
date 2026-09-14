@@ -14,7 +14,7 @@ param(
     [int]$RemotePort = 0,
     [string]$InstallDir = "",
     [string]$BinDir = (Join-Path $HOME ".local\bin"),
-    [string]$RepoUrl = "https://github.com/cclilshy/tayd.git",
+    [string]$RepoUrl = "https://github.com/cclilshy/tayc.git",
     [string]$FrpVersion = "0.69.0",
     [switch]$SkipStart,
     [switch]$SkipFrpDownload
@@ -23,13 +23,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 if ($env:INSTALL_DIR) { $InstallDir = $env:INSTALL_DIR }
-elseif ($env:CLIENT_INSTALL_DIR) { $InstallDir = $env:CLIENT_INSTALL_DIR }
 elseif ($InstallDir -eq "") {
-    $taydClientDir = Join-Path $HOME ".tayd-client"
-    $legacyClientDir = Join-Path $HOME ".loc-relay-client"
-    if (Test-Path $taydClientDir) { $InstallDir = $taydClientDir }
-    elseif (Test-Path $legacyClientDir) { $InstallDir = $legacyClientDir }
-    else { $InstallDir = $taydClientDir }
+    $InstallDir = Join-Path $HOME ".tayc-client"
 }
 if ($env:BIN_DIR) { $BinDir = $env:BIN_DIR }
 if ($env:REPO_URL) { $RepoUrl = $env:REPO_URL }
@@ -50,7 +45,7 @@ function Require-Command {
     }
 }
 
-function Get-TaydArch {
+function Get-TayCArch {
     switch ($env:PROCESSOR_ARCHITECTURE) {
         "AMD64" { return "amd64" }
         "ARM64" { return "arm64" }
@@ -74,13 +69,11 @@ function Clone-Or-Update {
     git clone $RepoUrl $InstallDir
 }
 
-function Select-TaydBinary {
-    $arch = Get-TaydArch
+function Select-TayCBinary {
+    $arch = Get-TayCArch
     $candidates = @(
-        (Join-Path $InstallDir "bin\tayd-windows-$arch.exe"),
-        (Join-Path $InstallDir "bin\loc-relay-windows-$arch.exe"),
-        (Join-Path $InstallDir "bin\tayd.exe"),
-        (Join-Path $InstallDir "bin\loc-relay.exe")
+        (Join-Path $InstallDir "bin\tayc-windows-$arch.exe"),
+        (Join-Path $InstallDir "bin\tayc.exe")
     )
 
     foreach ($candidate in $candidates) {
@@ -89,7 +82,7 @@ function Select-TaydBinary {
         }
     }
 
-    throw "no prebuilt tayd binary for windows-$arch; run ./build.sh before publishing"
+    throw "no prebuilt tayc binary for windows-$arch; run ./build.sh before publishing"
 }
 
 function Install-Frp {
@@ -97,10 +90,10 @@ function Install-Frp {
         return
     }
 
-    $arch = Get-TaydArch
+    $arch = Get-TayCArch
     $archive = "frp_${FrpVersion}_windows_${arch}.zip"
     $url = "https://github.com/fatedier/frp/releases/download/v${FrpVersion}/${archive}"
-    $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ("tayd-" + [System.Guid]::NewGuid().ToString("N"))
+    $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ("tayc-" + [System.Guid]::NewGuid().ToString("N"))
     $zip = Join-Path $tmpDir $archive
 
     New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
@@ -116,30 +109,27 @@ function Install-Frp {
         $bin = Join-Path $InstallDir "bin"
         New-Item -ItemType Directory -Force -Path $bin | Out-Null
         Copy-Item (Join-Path $frpDir.FullName "frpc.exe") (Join-Path $bin "frpc.exe") -Force
-        Copy-Item (Join-Path $frpDir.FullName "frps.exe") (Join-Path $bin "frps.exe") -Force
     }
     finally {
         Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 
-function Install-TaydCommand {
-    param([string]$TaydBin)
+function Install-TayCCommand {
+    param([string]$TayCBin)
 
     New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
-    $cmd = Join-Path $BinDir "tayd.cmd"
-    "@echo off`r`n`"$TaydBin`" %*`r`n" | Set-Content -Path $cmd -Encoding ASCII
-    $legacyCmd = Join-Path $BinDir "loc-relay.cmd"
-    Remove-Item $legacyCmd -Force -ErrorAction SilentlyContinue
+    $cmd = Join-Path $BinDir "tayc.cmd"
+    "@echo off`r`n`"$TayCBin`" %*`r`n" | Set-Content -Path $cmd -Encoding ASCII
     return $cmd
 }
 
 Clone-Or-Update
 
-$taydBin = Select-TaydBinary
+$taycBin = Select-TayCBinary
 Install-Frp
 
-& $taydBin init `
+& $taycBin init `
     --server $ServerAddr `
     --token $Token `
     --server-port $ServerPort
@@ -158,30 +148,30 @@ if ($proxyConfigured) {
         }
     }
 
-    & $taydBin remove $ProxyName --no-restart *> $null
+    & $taycBin remove $ProxyName --no-restart *> $null
     $addArgs = @("add", $ProxyName, $LocalEndpoint, [string]$RemotePort)
     if ($ProxyType -ne "") {
         $addArgs += @("--type", $ProxyType)
     }
     $addArgs += "--no-restart"
-    & $taydBin @addArgs
+    & $taycBin @addArgs
 }
 
-New-Item -ItemType File -Force -Path (Join-Path $InstallDir ".tayd-client") | Out-Null
-$taydCmd = Install-TaydCommand $taydBin
+New-Item -ItemType File -Force -Path (Join-Path $InstallDir ".tayc-client") | Out-Null
+$taycCmd = Install-TayCCommand $taycBin
 
 if (-not $SkipStart) {
-    & $taydBin restart
+    & $taycBin restart
     Write-Output "[restarted] client gateway"
 }
 else {
     Write-Output "[saved] start skipped"
 }
 
-Write-Output "[installed] tayd client -> $InstallDir"
+Write-Output "[installed] tayc client -> $InstallDir"
 Write-Output "[server] ${ServerAddr}:${ServerPort}"
-Write-Output "[command] $taydCmd"
+Write-Output "[command] $taycCmd"
 if ($proxyConfigured) {
     Write-Output "[proxy] $ProxyName $LocalEndpoint -> $RemotePort"
 }
-Write-Output "[uninstall] & `"$taydCmd`" uninstall"
+Write-Output "[uninstall] & `"$taycCmd`" uninstall"

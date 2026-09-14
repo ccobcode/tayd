@@ -9,17 +9,23 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
 
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="Tayd"
+        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:usesCleartextTraffic="true"
         android:theme="@style/AppTheme">
         <activity
             android:name=".qr.ui.QrScanActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+            android:exported="false" />
 
         <activity
             android:name=".app.MainActivity"
@@ -36,7 +42,8 @@
 
         <receiver
             android:name=".event.runtime.EventListenerReceiver"
-            android:exported="true">
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
             <intent-filter>
                 <action android:name="android.intent.action.PHONE_STATE" />
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
@@ -54,7 +61,7 @@
         <service
             android:name=".event.runtime.EventNotificationListenerService"
             android:exported="true"
-            android:label="Tayd Event Listener"
+            android:label="@string/event_listener_name"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />

@@ -34,8 +34,6 @@ pub(crate) struct Proxy {
     pub(crate) name: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) types: Vec<String>,
-    #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
-    pub(crate) legacy_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) local_scheme: Option<String>,
     pub(crate) local_ip: String,

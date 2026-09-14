@@ -20,7 +20,9 @@ build_darwin() {
 	else
 		"$cargo_bin" build --release
 	fi
-	cp target/release/tayd bin/tayd-darwin-$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+	darwin_arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+	cp target/release/tayc "bin/tayc-darwin-$darwin_arch"
+	cp target/release/tayd "bin/tayd-darwin-$darwin_arch"
 
 	if rustup target list --installed | grep -F x86_64-apple-darwin >/dev/null 2>&1; then
 		if [ -n "$rustc_bin" ]; then
@@ -28,13 +30,14 @@ build_darwin() {
 		else
 			"$cargo_bin" build --release --target x86_64-apple-darwin
 		fi
+		cp target/x86_64-apple-darwin/release/tayc bin/tayc-darwin-amd64
 		cp target/x86_64-apple-darwin/release/tayd bin/tayd-darwin-amd64
 	fi
 }
 
 build_linux() {
 	platform=$1
-	output=$2
+	suffix=$2
 	target_dir=$3
 
 	docker run --rm \
@@ -45,7 +48,7 @@ build_linux() {
 		-v "$PWD":/work \
 		-w /work \
 		"$RUST_IMAGE" \
-		sh -c "cargo build --release && cp /work/target/$target_dir/release/tayd /work/$output"
+		sh -c "cargo build --release && cp /work/target/$target_dir/release/tayc /work/bin/tayc-$suffix && cp /work/target/$target_dir/release/tayd /work/bin/tayd-$suffix"
 }
 
 build_windows_amd64() {
@@ -60,7 +63,7 @@ build_windows_amd64() {
 		-v "$PWD":/work \
 		-w /work \
 		"$RUST_IMAGE" \
-		sh -c "apt-get update && apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64 && rustup target add x86_64-pc-windows-gnu && cargo build --release --target x86_64-pc-windows-gnu && cp /work/target/windows-amd64/x86_64-pc-windows-gnu/release/tayd.exe /work/bin/tayd-windows-amd64.exe && chown -R \"\$HOST_UID:\$HOST_GID\" /work/bin/tayd-windows-amd64.exe /work/target/windows-amd64 /work/.cargo-home"
+		sh -c "apt-get update && apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64 && rustup target add x86_64-pc-windows-gnu && cargo build --release --target x86_64-pc-windows-gnu && cp /work/target/windows-amd64/x86_64-pc-windows-gnu/release/tayc.exe /work/bin/tayc-windows-amd64.exe && cp /work/target/windows-amd64/x86_64-pc-windows-gnu/release/tayd.exe /work/bin/tayd-windows-amd64.exe && chown -R \"\$HOST_UID:\$HOST_GID\" /work/bin/tayc-windows-amd64.exe /work/bin/tayd-windows-amd64.exe /work/target/windows-amd64 /work/.cargo-home"
 }
 
 mkdir -p bin target .cargo-home
@@ -69,8 +72,8 @@ if [ "$(uname -s)" = "Darwin" ]; then
 	build_darwin
 fi
 
-build_linux linux/amd64 bin/tayd-linux-amd64 linux-amd64
-build_linux linux/arm64/v8 bin/tayd-linux-arm64 linux-arm64
+build_linux linux/amd64 linux-amd64 linux-amd64
+build_linux linux/arm64/v8 linux-arm64 linux-arm64
 build_windows_amd64
 
-chmod +x bin/tayd-*
+chmod +x bin/tayc-* bin/tayd-*

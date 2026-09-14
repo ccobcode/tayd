@@ -8,10 +8,10 @@ use crate::{
         stop_process, stop_process_with_announce, toml_string,
     },
     model::{Proxy, Server, ServerInstallInfo, State, STATE_VERSION},
-    output::{format_proxy_route, print_server_install_info, status, usage},
-    paths::{loc_relay_home, write_private},
+    output::{client_usage, format_proxy_route, print_server_install_info, server_usage, status},
+    paths::{tayc_home, tayd_home, write_private},
     service::{
-        install_service, remove_loc_relay_symlink, restart_service_if_running, service_status,
+        install_service, remove_tayc_symlink, restart_service_if_running, service_status,
         uninstall_service,
     },
     state::{load_server_install_info, load_state, save_server_install_info, save_state},
@@ -19,33 +19,54 @@ use crate::{
 };
 use std::{env, fs};
 
-pub(crate) fn run() -> Result<()> {
+pub(crate) fn run_client() -> Result<()> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
-        usage();
+        client_usage();
         return Err("missing command".into());
     };
     let rest: Vec<String> = args.collect();
 
     match command.as_str() {
         "init" => cmd_init(&rest),
-        "init-server" => cmd_init_server(&rest),
         "add" => cmd_add(&rest),
         "remove" => cmd_remove(&rest),
         "list" => cmd_list(),
         "show" => cmd_show(&rest),
         "render" => cmd_render(),
-        "verify" => run_frp("frpc", &["verify", "-c", "frpc.toml"]),
+        "verify" => run_frp(&tayc_home()?, "frpc", &["verify", "-c", "frpc.toml"]),
         "restart" => cmd_restart(),
-        "install" | "up" => start_process("frpc", &["-c", "frpc.toml"]),
-        "info" => cmd_server_info(),
-        "server" => cmd_server(&rest),
-        "server-up" => start_process("frps", &["-c", "frps.toml"]),
-        "server-down" => stop_process("frps"),
+        "install" => start_process(&tayc_home()?, "frpc", &["-c", "frpc.toml"]),
         "service" => cmd_service(&rest),
-        "uninstall" | "down" => cmd_down(),
+        "uninstall" => cmd_down(),
         "help" | "-h" | "--help" => {
-            usage();
+            client_usage();
+            Ok(())
+        }
+        _ => Err(format!("unknown command: {command}").into()),
+    }
+}
+
+pub(crate) fn run_server() -> Result<()> {
+    let mut args = env::args().skip(1);
+    let Some(command) = args.next() else {
+        server_usage();
+        return Err("missing command".into());
+    };
+    let rest: Vec<String> = args.collect();
+
+    match command.as_str() {
+        "init" => cmd_init_server(&rest),
+        "install" => start_process(&tayd_home()?, "frps", &["-c", "frps.toml"]),
+        "uninstall" => stop_process(&tayd_home()?, "frps"),
+        "restart" => {
+            let home = tayd_home()?;
+            stop_process(&home, "frps")?;
+            start_process(&home, "frps", &["-c", "frps.toml"])
+        }
+        "info" | "log" => cmd_server_info(),
+        "help" | "-h" | "--help" => {
+            server_usage();
             Ok(())
         }
         _ => Err(format!("unknown command: {command}").into()),
@@ -87,7 +108,7 @@ fn cmd_init_server(args: &[String]) -> Result<()> {
                 raw_base_url = Some(option_value(args, i)?.to_owned());
                 i += 2;
             }
-            unknown => return Err(format!("unknown init-server option: {unknown}").into()),
+            unknown => return Err(format!("unknown init option: {unknown}").into()),
         }
     }
 
@@ -106,7 +127,7 @@ fn cmd_init_server(args: &[String]) -> Result<()> {
     if let Some(port) = https_port {
         config.push_str(&format!("vhostHTTPSPort = {port}\n"));
     }
-    let home = loc_relay_home()?;
+    let home = tayd_home()?;
     fs::create_dir_all(&home)?;
     write_private(home.join("frps.toml"), config)?;
     if let Some(addr) = addr {
@@ -193,7 +214,6 @@ fn cmd_init(args: &[String]) -> Result<()> {
         vec![Proxy {
             name,
             types,
-            legacy_type: None,
             local_scheme: None,
             local_ip,
             local_port,
@@ -222,7 +242,7 @@ fn cmd_init(args: &[String]) -> Result<()> {
     println!(
         "{} client -> {}",
         status("initialized"),
-        loc_relay_home()?.display()
+        tayc_home()?.display()
     );
     Ok(())
 }
@@ -230,7 +250,7 @@ fn cmd_init(args: &[String]) -> Result<()> {
 fn cmd_add(args: &[String]) -> Result<()> {
     if args.len() < 3 {
         return Err(
-            "usage: tayd add <name> <local> <remote> [--type tcp|udp|both|tcp,udp|http|https] [--group name --group-key key] [--crt path --key path] [--no-restart]"
+            "usage: tayc add <name> <local> <remote> [--type tcp|udp|both|tcp,udp|http|https] [--group name --group-key key] [--crt path --key path] [--no-restart]"
                 .into(),
         );
     }
@@ -290,7 +310,7 @@ fn cmd_add(args: &[String]) -> Result<()> {
     let mut state = load_state()?;
     if state.proxies.iter().any(|proxy| proxy.name == name) {
         return Err(format!(
-            "[error] mapping \"{name}\" already exists\nhint: use `tayd remove {name}` first"
+            "[error] mapping \"{name}\" already exists\nhint: use `tayc remove {name}` first"
         )
         .into());
     }
@@ -298,7 +318,6 @@ fn cmd_add(args: &[String]) -> Result<()> {
         name: name.clone(),
         types,
         local_scheme: parsed_local.scheme,
-        legacy_type: None,
         local_ip,
         local_port,
         remote_port: parsed_remote.port,
@@ -323,7 +342,7 @@ fn cmd_add(args: &[String]) -> Result<()> {
 
 fn cmd_remove(args: &[String]) -> Result<()> {
     if args.is_empty() || args.len() > 2 {
-        return Err("usage: tayd remove <name> [--no-restart]".into());
+        return Err("usage: tayc remove <name> [--no-restart]".into());
     }
 
     let mut name: Option<&String> = None;
@@ -338,7 +357,7 @@ fn cmd_remove(args: &[String]) -> Result<()> {
         }
     }
 
-    let name = name.ok_or("usage: tayd remove <name> [--no-restart]")?;
+    let name = name.ok_or("usage: tayc remove <name> [--no-restart]")?;
     let mut state = load_state()?;
     let index = state
         .proxies
@@ -376,7 +395,7 @@ fn cmd_list() -> Result<()> {
 
 fn cmd_show(args: &[String]) -> Result<()> {
     if args.len() > 1 {
-        return Err("usage: tayd show [name]".into());
+        return Err("usage: tayc show [name]".into());
     }
     let state = load_state()?;
     for proxy in state.proxies {
@@ -402,26 +421,22 @@ fn cmd_render() -> Result<()> {
 }
 
 fn cmd_down() -> Result<()> {
-    let home = loc_relay_home()?;
-    let marker = home.join(".tayd-client");
-    let legacy_marker = home.join(".loc-relay-client");
-    if !marker.exists()
-        && !legacy_marker.exists()
-        && !env_flag("TAYD_FORCE_DOWN", "LOC_RELAY_FORCE_DOWN")
-    {
+    let home = tayc_home()?;
+    let marker = home.join(".tayc-client");
+    if !marker.exists() && !env_flag("TAYC_FORCE_DOWN") {
         return Err(format!(
-            "{} is not marked as a client install; set TAYD_FORCE_DOWN=1 to remove it anyway",
+            "{} is not marked as a client install; set TAYC_FORCE_DOWN=1 to remove it anyway",
             home.display()
         )
         .into());
     }
 
-    if !env_flag("TAYD_SKIP_STOP", "LOC_RELAY_SKIP_STOP") {
-        let _ = stop_process("frpc");
+    if !env_flag("TAYC_SKIP_STOP") {
+        let _ = stop_process(&home, "frpc");
     }
 
     let _ = uninstall_service();
-    remove_loc_relay_symlink(&home)?;
+    remove_tayc_symlink(&home)?;
     fs::remove_dir_all(&home)?;
     println!("removed {}", home.display());
     Ok(())
@@ -432,13 +447,14 @@ fn cmd_restart() -> Result<()> {
         println!("{} client gateway", status("restarted"));
         return Ok(());
     }
-    stop_process("frpc")?;
-    start_process("frpc", &["-c", "frpc.toml"])
+    let home = tayc_home()?;
+    stop_process(&home, "frpc")?;
+    start_process(&home, "frpc", &["-c", "frpc.toml"])
 }
 
 fn cmd_service(args: &[String]) -> Result<()> {
     if args.len() != 1 {
-        return Err("usage: tayd service <install|uninstall|status>".into());
+        return Err("usage: tayc service <install|uninstall|status>".into());
     }
     match args[0].as_str() {
         "install" => install_service(),
@@ -448,29 +464,13 @@ fn cmd_service(args: &[String]) -> Result<()> {
     }
 }
 
-fn cmd_server(args: &[String]) -> Result<()> {
-    if args.len() != 1 {
-        return Err("usage: tayd server <install|uninstall|restart|info|log>".into());
-    }
-    match args[0].as_str() {
-        "install" => start_process("frps", &["-c", "frps.toml"]),
-        "uninstall" => stop_process("frps"),
-        "restart" => {
-            stop_process("frps")?;
-            start_process("frps", &["-c", "frps.toml"])
-        }
-        "info" | "log" => cmd_server_info(),
-        unknown => Err(format!("unknown server command: {unknown}").into()),
-    }
-}
-
 fn cmd_server_info() -> Result<()> {
     let info = load_server_install_info()?;
     print_server_install_info(&info)
 }
 
-fn env_flag(primary: &str, legacy: &str) -> bool {
-    env::var(primary).ok().as_deref() == Some("1") || env::var(legacy).ok().as_deref() == Some("1")
+fn env_flag(name: &str) -> bool {
+    env::var(name).ok().as_deref() == Some("1")
 }
 
 fn option_value(args: &[String], index: usize) -> Result<&str> {
@@ -489,10 +489,11 @@ fn refresh_client_after_edit(no_restart: bool) -> Result<()> {
         return Ok(());
     }
 
-    let pid_file = loc_relay_home()?.join("frpc.pid");
+    let pid_file = tayc_home()?.join("frpc.pid");
     if pid_file.exists() {
-        stop_process_with_announce("frpc", false)?;
-        start_process_with_announce("frpc", &["-c", "frpc.toml"], false)?;
+        let home = tayc_home()?;
+        stop_process_with_announce(&home, "frpc", false)?;
+        start_process_with_announce(&home, "frpc", &["-c", "frpc.toml"], false)?;
         println!("{} client gateway", status("restarted"));
     } else {
         println!("{} client gateway is not running", status("saved"));

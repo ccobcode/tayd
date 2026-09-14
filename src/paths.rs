@@ -21,8 +21,16 @@ pub(crate) fn config_home() -> Result<PathBuf> {
     Ok(user_home()?.join(".config"))
 }
 
-pub(crate) fn loc_relay_home() -> io::Result<PathBuf> {
-    if let Ok(home) = env::var("TAYD_HOME").or_else(|_| env::var("LOC_RELAY_HOME")) {
+pub(crate) fn tayc_home() -> io::Result<PathBuf> {
+    application_home("TAYC_HOME")
+}
+
+pub(crate) fn tayd_home() -> io::Result<PathBuf> {
+    application_home("TAYD_HOME")
+}
+
+fn application_home(env_name: &str) -> io::Result<PathBuf> {
+    if let Ok(home) = env::var(env_name) {
         let path = PathBuf::from(home);
         if path.exists() {
             return fs::canonicalize(path);

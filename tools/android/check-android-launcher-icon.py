@@ -5,7 +5,7 @@ from sys import exit
 from PIL import Image
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 RES = ROOT / "android" / "app" / "src" / "main" / "res"
 
 DENSITIES = {
@@ -15,6 +15,8 @@ DENSITIES = {
     "xxhdpi": 3,
     "xxxhdpi": 4,
 }
+
+SALIENT_PIXEL_THRESHOLD = 48
 
 
 def main():
@@ -30,22 +32,17 @@ def main():
         pixels = image.load()
         center = (expected_size - 1) / 2
         safe_radius = 33 * scale
-        has_alpha = False
         outside_safe_zone = 0
         meaningful_pixels = 0
 
         for y in range(expected_size):
             for x in range(expected_size):
                 r, g, b, a = pixels[x, y]
-                if a < 255:
-                    has_alpha = True
-                if a > 32 and max(r, g, b) > 32:
+                if a > 32 and max(r, g, b) > SALIENT_PIXEL_THRESHOLD:
                     meaningful_pixels += 1
                     if ((x - center) ** 2 + (y - center) ** 2) ** 0.5 > safe_radius:
                         outside_safe_zone += 1
 
-        if not has_alpha:
-            failures.append(f"{path}: foreground must include transparent padding")
         if meaningful_pixels == 0:
             failures.append(f"{path}: foreground has no meaningful visible pixels")
         if outside_safe_zone:

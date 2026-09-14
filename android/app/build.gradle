@@ -1,19 +1,20 @@
 plugins {
     id 'com.android.application'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
-def releaseKeystoreFile = System.getenv('TAYD_KEYSTORE_FILE')
-def releaseKeystorePassword = System.getenv('TAYD_KEYSTORE_PASSWORD')
-def releaseKeyAlias = System.getenv('TAYD_KEY_ALIAS')
-def releaseKeyPassword = System.getenv('TAYD_KEY_PASSWORD')
+def releaseKeystoreFile = System.getenv('TAYC_KEYSTORE_FILE')
+def releaseKeystorePassword = System.getenv('TAYC_KEYSTORE_PASSWORD')
+def releaseKeyAlias = System.getenv('TAYC_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('TAYC_KEY_PASSWORD')
 def hasReleaseSigning = releaseKeystoreFile && releaseKeystorePassword && releaseKeyAlias && releaseKeyPassword
 
 android {
-    namespace 'com.cclilshy.tayd'
+    namespace 'com.cclilshy.tayc'
     compileSdk 36
 
     defaultConfig {
-        applicationId 'com.cclilshy.tayd'
+        applicationId 'com.cclilshy.tayc'
         minSdk 26
         targetSdk 28
         versionCode 1
@@ -51,9 +52,26 @@ android {
             useLegacyPackaging true
         }
     }
+
+    buildFeatures {
+        compose true
+    }
 }
 
 dependencies {
+    def composeBom = platform('androidx.compose:compose-bom:2026.06.01')
+
+    implementation composeBom
+    androidTestImplementation composeBom
+    implementation 'androidx.activity:activity-compose:1.13.0'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material3:material3-adaptive-navigation-suite'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    debugImplementation 'androidx.compose.ui:ui-test-manifest'
+
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.core:core:1.18.0'
     implementation 'com.google.android.material:material:1.14.0'

@@ -9,7 +9,7 @@ use std::{
     io::{self, IsTerminal},
 };
 
-const DEFAULT_RAW_BASE_URL: &str = "https://raw.githubusercontent.com/cclilshy/tayd/main/scripts";
+const DEFAULT_RAW_BASE_URL: &str = "https://raw.githubusercontent.com/cclilshy/tayc/main/scripts";
 const TERMINAL_QR_QUIET_ZONE: isize = 4;
 const TERMINAL_QR_STYLE: &str = "\x1b[30;47m";
 const TERMINAL_QR_RESET: &str = "\x1b[0m";
@@ -106,7 +106,7 @@ pub(crate) fn print_server_install_info(info: &ServerInstallInfo) -> Result<()> 
 
 fn server_qr_payload(info: &ServerInstallInfo) -> String {
     format!(
-        "tayd://server?addr={}&port={}&token={}",
+        "tayc://server?addr={}&port={}&token={}",
         url_encode(&info.addr),
         info.port,
         url_encode(&info.token)
@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn terminal_qr_renders_compact_square_with_standard_quiet_zone() {
         let payload =
-            "tayd://server?addr=frp.example.com&port=7000&token=0123456789abcdef0123456789abcdef0123456789abcdef";
+            "tayc://server?addr=frp.example.com&port=7000&token=0123456789abcdef0123456789abcdef0123456789abcdef";
         let qr = render_terminal_qr(payload).expect("QR should render");
         let code = terminal_qr_code(payload).expect("payload should be encodable");
         let module_height = code.width() + (TERMINAL_QR_QUIET_ZONE as usize * 2);
@@ -209,7 +209,7 @@ mod tests {
 
     #[test]
     fn terminal_qr_keeps_white_border_for_scanners() {
-        let payload = "tayd://server?addr=frp.example.com&port=7000&token=server-token";
+        let payload = "tayc://server?addr=frp.example.com&port=7000&token=server-token";
         let qr = render_terminal_qr(payload).expect("QR should render");
         let visible_lines: Vec<String> = qr.lines().map(strip_ansi).collect();
         let quiet = TERMINAL_QR_QUIET_ZONE as usize;
@@ -241,36 +241,29 @@ mod tests {
     }
 }
 
-pub(crate) fn usage() {
+pub(crate) fn client_usage() {
     println!(
-        r#"tayd
+        r#"tayc
 
 Usage:
-  tayd <command> [arguments] [options]
-  tayd add <name> <local> <remote> [options]
+  tayc <command> [arguments] [options]
+  tayc add <name> <local> <remote> [options]
 
 Commands:
-  tayd add <name> <local> <remote>          Add a client mapping
-  tayd remove <name>                        Remove a mapping
-  tayd list                                 List mappings
-  tayd show [name]                          Show rendered proxy config
-  tayd render                               Rebuild frpc config files
-  tayd verify                               Verify frpc config with frpc
-  tayd restart                              Restart the client gateway
-  tayd install                              Start the client gateway
-  tayd uninstall                            Remove the local client install
-  tayd info                                 Show server token and client install commands
-  tayd service install                      Install auto-start service
-  tayd service status                       Show auto-start service status
-  tayd service uninstall                    Remove auto-start service
-  tayd server install                       Start the server gateway
-  tayd server uninstall                     Stop the server gateway
-  tayd server restart                       Restart the server gateway
-  tayd server info                          Show server token and client install commands
-  tayd server log                           Show server install log
-  tayd init --server <addr> --token <token>
+  tayc add <name> <local> <remote>          Add a client mapping
+  tayc remove <name>                        Remove a mapping
+  tayc list                                 List mappings
+  tayc show [name]                          Show rendered proxy config
+  tayc render                               Rebuild frpc config files
+  tayc verify                               Verify frpc config with frpc
+  tayc restart                              Restart the client gateway
+  tayc install                              Start the client gateway
+  tayc uninstall                            Remove the local client install
+  tayc service install                      Install auto-start service
+  tayc service status                       Show auto-start service status
+  tayc service uninstall                    Remove auto-start service
+  tayc init --server <addr> --token <token>
                                            Initialize client state
-  tayd init-server --token <token>          Initialize server state
 
 Endpoint forms:
   local:  [tcp://|udp://|http://|https://][host:]port
@@ -293,20 +286,43 @@ Options:
   init options:
     --server-port 7000                      frps bind port used by frpc
 
-  init-server options:
-    --port 7000                             frps bind port
-    --addr host                             Public server address for server info
-    --http-port 80                          frps HTTP vhost port
-    --https-port 443                        frps HTTPS vhost port
-    --raw-base-url url                      Installer script base URL
+Examples:
+  tayc init --server frp.example.com --token <token>
+  tayc add web 8080 18080
+  tayc add dns udp://5353 5353
+  tayc add game 8680 2929 --type both
+  tayc add site 3000 http://site.example.com
+  tayc add blog 3000 https://blog.example.com --group blog --group-key shard-a
+  tayc add app http://3000 https://app.example.com --crt fullchain.pem --key privkey.pem"#
+    );
+}
+
+pub(crate) fn server_usage() {
+    println!(
+        r#"tayd
+
+Usage:
+  tayd <command> [arguments] [options]
+
+Commands:
+  tayd init --token <token>                 Initialize server state
+  tayd install                              Start the server gateway
+  tayd uninstall                            Stop the server gateway
+  tayd restart                              Restart the server gateway
+  tayd info                                 Show server token and client install commands
+  tayd log                                  Show server install log
+
+Init options:
+  --port 7000                               frps bind port
+  --addr host                               Public server address for server info
+  --http-port 80                            frps HTTP vhost port
+  --https-port 443                          frps HTTPS vhost port
+  --raw-base-url url                        Installer script base URL
 
 Examples:
-  tayd init --server frp.example.com --token <token>
-  tayd add web 8080 18080
-  tayd add dns udp://5353 5353
-  tayd add game 8680 2929 --type both
-  tayd add site 3000 http://site.example.com
-  tayd add blog 3000 https://blog.example.com --group blog --group-key shard-a
-  tayd add app http://3000 https://app.example.com --crt fullchain.pem --key privkey.pem"#
+  tayd init --token <token> --addr frp.example.com
+  tayd init --token <token> --addr frp.example.com --http-port 80 --https-port 443
+  tayd restart
+  tayd info"#
     );
 }

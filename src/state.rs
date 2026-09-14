@@ -2,13 +2,13 @@ use crate::{
     endpoint::{frp_proxy_name, proxy_types, valid_name, validate_load_balancer},
     frp::render_state,
     model::{ServerInstallInfo, State, STATE_VERSION},
-    paths::{loc_relay_home, write_private},
+    paths::{tayc_home, tayd_home, write_private},
     Result,
 };
 use std::{collections::HashSet, fs};
 
 pub(crate) fn load_state() -> Result<State> {
-    let path = loc_relay_home()?.join("state.json");
+    let path = tayc_home()?.join("state.json");
     let data =
         fs::read_to_string(&path).map_err(|err| format!("read {}: {err}", path.display()))?;
     let state: State =
@@ -18,7 +18,7 @@ pub(crate) fn load_state() -> Result<State> {
 }
 
 pub(crate) fn load_server_install_info() -> Result<ServerInstallInfo> {
-    let path = loc_relay_home()?.join("server-install.json");
+    let path = tayd_home()?.join("server-install.json");
     let data =
         fs::read_to_string(&path).map_err(|err| format!("read {}: {err}", path.display()))?;
     let info: ServerInstallInfo =
@@ -30,7 +30,7 @@ pub(crate) fn load_server_install_info() -> Result<ServerInstallInfo> {
 pub(crate) fn save_server_install_info(info: &ServerInstallInfo) -> Result<()> {
     validate_server_install_info(info)?;
     let data = serde_json::to_string_pretty(info)? + "\n";
-    write_private(loc_relay_home()?.join("server-install.json"), data)
+    write_private(tayd_home()?.join("server-install.json"), data)
 }
 
 fn validate_server_install_info(info: &ServerInstallInfo) -> Result<()> {
@@ -46,7 +46,7 @@ fn validate_server_install_info(info: &ServerInstallInfo) -> Result<()> {
 pub(crate) fn save_state(state: &State) -> Result<()> {
     let state = normalize_state(state)?;
     validate_state(&state)?;
-    let home = loc_relay_home()?;
+    let home = tayc_home()?;
     fs::create_dir_all(&home)?;
     let data = serde_json::to_string_pretty(&state)? + "\n";
     write_private(home.join("state.json"), data)?;
@@ -131,7 +131,6 @@ fn normalize_state(state: &State) -> Result<State> {
     let mut state = state.clone();
     for proxy in &mut state.proxies {
         proxy.types = proxy_types(proxy)?;
-        proxy.legacy_type = None;
     }
     Ok(state)
 }

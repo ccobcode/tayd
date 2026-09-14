@@ -1,0 +1,888 @@
+<div id="tayc-compose-prototype">
+    <style>
+        #tayc-compose-prototype {
+            color-scheme: light dark;
+            display: grid;
+            place-items: start center;
+            width: 100%;
+            padding: 12px 0;
+            color: light-dark(#172033, #e4e9f5);
+            font-family:
+                Inter,
+                ui-sans-serif,
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+        }
+
+        #tayc-compose-prototype * {
+            box-sizing: border-box;
+        }
+
+        #tayc-compose-prototype button,
+        #tayc-compose-prototype input {
+            font: inherit;
+        }
+
+        #tayc-compose-prototype .tayc-phone {
+            width: min(100%, 390px);
+            overflow: hidden;
+            border: 1px solid light-dark(#dce2ef, #394256);
+            border-radius: 30px;
+            background: light-dark(#f7f9ff, #10131a);
+            box-shadow: 0 18px 48px light-dark(rgba(30, 64, 125, 0.16), rgba(0, 0, 0, 0.42));
+        }
+
+        #tayc-compose-prototype .tayc-status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 34px;
+            padding: 0 22px;
+            color: light-dark(#263248, #d7dceb);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        #tayc-compose-prototype .tayc-status-icons {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        #tayc-compose-prototype .tayc-status-icons svg {
+            width: 13px;
+            height: 13px;
+        }
+
+        #tayc-compose-prototype .tayc-topbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 64px;
+            padding: 8px 18px;
+        }
+
+        #tayc-compose-prototype .tayc-brand-mark {
+            display: grid;
+            place-items: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 14px;
+            color: #ffffff;
+            background: linear-gradient(145deg, #0877ff, #0046a9);
+            box-shadow: 0 8px 18px rgba(11, 87, 208, 0.24);
+        }
+
+        #tayc-compose-prototype .tayc-brand-mark svg {
+            width: 21px;
+            height: 21px;
+        }
+
+        #tayc-compose-prototype .tayc-topbar-copy {
+            min-width: 0;
+            flex: 1;
+        }
+
+        #tayc-compose-prototype .tayc-title {
+            margin: 0;
+            color: light-dark(#172033, #f1f4ff);
+            font-size: 21px;
+            font-weight: 500;
+            letter-spacing: -0.02em;
+        }
+
+        #tayc-compose-prototype .tayc-overline {
+            margin: 2px 0 0;
+            color: light-dark(#61708b, #9ca8c0);
+            font-size: 12px;
+        }
+
+        #tayc-compose-prototype .tayc-icon-button {
+            display: grid;
+            place-items: center;
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            border: 0;
+            border-radius: 22px;
+            color: light-dark(#33435f, #c3cce0);
+            background: transparent;
+            cursor: pointer;
+        }
+
+        #tayc-compose-prototype .tayc-icon-button:hover {
+            background: light-dark(#e9efff, #222a38);
+        }
+
+        #tayc-compose-prototype .tayc-icon-button svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        #tayc-compose-prototype .tayc-view {
+            display: none;
+            padding: 6px 16px 24px;
+        }
+
+        #tayc-compose-prototype .tayc-view[data-active="true"] {
+            display: block;
+        }
+
+        #tayc-compose-prototype .tayc-hero {
+            position: relative;
+            overflow: hidden;
+            padding: 22px;
+            border-radius: 28px;
+            color: #ffffff;
+            background: linear-gradient(138deg, #0b57d0 0%, #0476e5 52%, #00a3ff 100%);
+            box-shadow: 0 14px 30px rgba(9, 87, 208, 0.22);
+        }
+
+        #tayc-compose-prototype .tayc-hero::after {
+            position: absolute;
+            right: -42px;
+            bottom: -72px;
+            width: 190px;
+            height: 190px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+            content: "";
+        }
+
+        #tayc-compose-prototype .tayc-state-label {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        #tayc-compose-prototype .tayc-state-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #9cffc3;
+            box-shadow: 0 0 0 5px rgba(156, 255, 195, 0.18);
+        }
+
+        #tayc-compose-prototype .tayc-hero-heading {
+            position: relative;
+            z-index: 1;
+            margin: 18px 0 4px;
+            font-size: 28px;
+            font-weight: 500;
+            letter-spacing: -0.03em;
+        }
+
+        #tayc-compose-prototype .tayc-hero-copy {
+            position: relative;
+            z-index: 1;
+            margin: 0;
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 13px;
+        }
+
+        #tayc-compose-prototype .tayc-hero-footer {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 22px;
+        }
+
+        #tayc-compose-prototype .tayc-hero-metrics {
+            display: flex;
+            gap: 16px;
+        }
+
+        #tayc-compose-prototype .tayc-hero-metric strong,
+        #tayc-compose-prototype .tayc-hero-metric span {
+            display: block;
+        }
+
+        #tayc-compose-prototype .tayc-hero-metric strong {
+            font-size: 17px;
+            font-weight: 500;
+        }
+
+        #tayc-compose-prototype .tayc-hero-metric span {
+            margin-top: 2px;
+            color: rgba(255, 255, 255, 0.72);
+            font-size: 11px;
+        }
+
+        #tayc-compose-prototype .tayc-gateway-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 44px;
+            padding: 0 17px;
+            border: 0;
+            border-radius: 22px;
+            color: #0646a1;
+            background: #ffffff;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 7px 16px rgba(4, 48, 117, 0.2);
+        }
+
+        #tayc-compose-prototype .tayc-gateway-button svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        #tayc-compose-prototype .tayc-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 24px 4px 10px;
+        }
+
+        #tayc-compose-prototype .tayc-section-header h2 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 500;
+        }
+
+        #tayc-compose-prototype .tayc-text-button {
+            min-height: 44px;
+            padding: 0 8px;
+            border: 0;
+            color: light-dark(#0b57d0, #a9c7ff);
+            background: transparent;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        #tayc-compose-prototype .tayc-quick-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        #tayc-compose-prototype .tayc-quick-service {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            min-height: 132px;
+            padding: 15px;
+            border: 1px solid light-dark(#dce4f4, #30394b);
+            border-radius: 22px;
+            color: light-dark(#172033, #e7ebf7);
+            background: light-dark(#ffffff, #181d27);
+            text-align: left;
+            cursor: pointer;
+        }
+
+        #tayc-compose-prototype .tayc-quick-service:hover,
+        #tayc-compose-prototype .tayc-service-row:hover,
+        #tayc-compose-prototype .tayc-setting-row:hover {
+            background: light-dark(#f0f5ff, #202736);
+        }
+
+        #tayc-compose-prototype .tayc-quick-icon,
+        #tayc-compose-prototype .tayc-service-icon,
+        #tayc-compose-prototype .tayc-setting-icon {
+            display: grid;
+            place-items: center;
+            color: light-dark(#0b57d0, #aac7ff);
+            background: light-dark(#dce8ff, #17345f);
+        }
+
+        #tayc-compose-prototype .tayc-quick-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 14px;
+        }
+
+        #tayc-compose-prototype .tayc-quick-icon svg,
+        #tayc-compose-prototype .tayc-service-icon svg,
+        #tayc-compose-prototype .tayc-setting-icon svg {
+            width: 19px;
+            height: 19px;
+        }
+
+        #tayc-compose-prototype .tayc-quick-service strong {
+            margin-top: 13px;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        #tayc-compose-prototype .tayc-quick-service span {
+            margin-top: 4px;
+            color: light-dark(#687690, #9ca8c0);
+            font-size: 12px;
+        }
+
+        #tayc-compose-prototype .tayc-page-heading {
+            margin: 2px 4px 4px;
+            font-size: 26px;
+            font-weight: 500;
+            letter-spacing: -0.03em;
+        }
+
+        #tayc-compose-prototype .tayc-page-subtitle {
+            margin: 0 4px 18px;
+            color: light-dark(#687690, #9ca8c0);
+            font-size: 13px;
+        }
+
+        #tayc-compose-prototype .tayc-service-list,
+        #tayc-compose-prototype .tayc-setting-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        #tayc-compose-prototype .tayc-service-row,
+        #tayc-compose-prototype .tayc-setting-row {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            width: 100%;
+            min-height: 78px;
+            padding: 13px;
+            border: 1px solid light-dark(#dce4f4, #30394b);
+            border-radius: 22px;
+            color: light-dark(#172033, #e7ebf7);
+            background: light-dark(#ffffff, #181d27);
+            text-align: left;
+        }
+
+        #tayc-compose-prototype button.tayc-service-row,
+        #tayc-compose-prototype button.tayc-setting-row {
+            cursor: pointer;
+        }
+
+        #tayc-compose-prototype .tayc-service-icon,
+        #tayc-compose-prototype .tayc-setting-icon {
+            flex: 0 0 auto;
+            width: 44px;
+            height: 44px;
+            border-radius: 16px;
+        }
+
+        #tayc-compose-prototype .tayc-row-copy {
+            min-width: 0;
+            flex: 1;
+        }
+
+        #tayc-compose-prototype .tayc-row-title {
+            display: block;
+            overflow: hidden;
+            font-size: 15px;
+            font-weight: 500;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #tayc-compose-prototype .tayc-row-subtitle {
+            display: block;
+            overflow: hidden;
+            margin-top: 4px;
+            color: light-dark(#687690, #9ca8c0);
+            font-size: 12px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #tayc-compose-prototype .tayc-switch {
+            position: relative;
+            flex: 0 0 auto;
+            width: 48px;
+            height: 30px;
+        }
+
+        #tayc-compose-prototype .tayc-switch input {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        #tayc-compose-prototype .tayc-switch-track {
+            position: absolute;
+            inset: 0;
+            border: 1px solid light-dark(#75839d, #7f8da7);
+            border-radius: 18px;
+            background: light-dark(#e0e5ef, #3a4354);
+            pointer-events: none;
+        }
+
+        #tayc-compose-prototype .tayc-switch-track::after {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: light-dark(#6c7890, #b7c1d5);
+            content: "";
+            transition:
+                transform 160ms ease,
+                background 160ms ease;
+        }
+
+        #tayc-compose-prototype .tayc-switch input:checked + .tayc-switch-track {
+            border-color: #0b57d0;
+            background: #0b57d0;
+        }
+
+        #tayc-compose-prototype .tayc-switch input:checked + .tayc-switch-track::after {
+            background: #ffffff;
+            transform: translateX(18px);
+        }
+
+        #tayc-compose-prototype .tayc-setting-group-title {
+            margin: 20px 4px 9px;
+            color: light-dark(#53637f, #a6b1c8);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        #tayc-compose-prototype .tayc-chevron {
+            color: light-dark(#75839d, #8f9ab1);
+        }
+
+        #tayc-compose-prototype .tayc-chevron svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        #tayc-compose-prototype .tayc-detail-hero {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 18px;
+            border-radius: 24px;
+            background: light-dark(#e7efff, #142d52);
+        }
+
+        #tayc-compose-prototype .tayc-detail-icon {
+            display: grid;
+            place-items: center;
+            width: 52px;
+            height: 52px;
+            border-radius: 18px;
+            color: #ffffff;
+            background: linear-gradient(145deg, #0b57d0, #1598ef);
+        }
+
+        #tayc-compose-prototype .tayc-detail-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        #tayc-compose-prototype .tayc-detail-title {
+            margin: 0;
+            font-size: 19px;
+            font-weight: 500;
+        }
+
+        #tayc-compose-prototype .tayc-detail-state {
+            margin: 4px 0 0;
+            color: light-dark(#53637f, #a6b1c8);
+            font-size: 12px;
+        }
+
+        #tayc-compose-prototype .tayc-form {
+            display: grid;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        #tayc-compose-prototype .tayc-field {
+            display: grid;
+            gap: 6px;
+            color: light-dark(#53637f, #a6b1c8);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        #tayc-compose-prototype .tayc-field input {
+            width: 100%;
+            min-height: 52px;
+            padding: 0 15px;
+            border: 1px solid light-dark(#b9c5d9, #536078);
+            border-radius: 16px;
+            color: light-dark(#172033, #eef2fd);
+            background: light-dark(#ffffff, #181d27);
+            font-size: 15px;
+            font-weight: 400;
+        }
+
+        #tayc-compose-prototype .tayc-primary-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            min-height: 50px;
+            margin-top: 4px;
+            border: 0;
+            border-radius: 18px;
+            color: #ffffff;
+            background: #0b57d0;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        #tayc-compose-prototype .tayc-primary-button svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        #tayc-compose-prototype .tayc-bottom-nav {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            min-height: 76px;
+            padding: 7px 10px 10px;
+            border-top: 1px solid light-dark(#e1e6f0, #2a3140);
+            background: light-dark(#ffffff, #161a22);
+        }
+
+        #tayc-compose-prototype .tayc-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            min-height: 56px;
+            padding: 5px;
+            border: 0;
+            border-radius: 18px;
+            color: light-dark(#687690, #9ca8c0);
+            background: transparent;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        #tayc-compose-prototype .tayc-nav-item svg {
+            width: 21px;
+            height: 21px;
+        }
+
+        #tayc-compose-prototype .tayc-nav-item[aria-selected="true"] {
+            color: light-dark(#0b57d0, #aac7ff);
+            background: light-dark(#e6eeff, #18335c);
+            font-weight: 500;
+        }
+
+        #tayc-compose-prototype .tayc-toast {
+            display: none;
+            margin: 12px 16px 0;
+            padding: 12px 15px;
+            border-radius: 16px;
+            color: light-dark(#f4f7ff, #15213a);
+            background: light-dark(#263248, #d9e2f5);
+            font-size: 13px;
+        }
+
+        #tayc-compose-prototype .tayc-toast[data-visible="true"] {
+            display: block;
+        }
+
+        @media (max-width: 360px) {
+            #tayc-compose-prototype .tayc-phone {
+                border-radius: 24px;
+            }
+
+            #tayc-compose-prototype .tayc-hero {
+                padding: 19px;
+            }
+
+            #tayc-compose-prototype .tayc-hero-footer {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            #tayc-compose-prototype .tayc-gateway-button {
+                width: 100%;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #tayc-compose-prototype .tayc-switch-track::after {
+                transition: none;
+            }
+        }
+    </style>
+
+    <section class="tayc-phone" aria-label="TayC Android interface prototype">
+        <div class="tayc-status-bar" aria-hidden="true">
+            <span>10:28</span>
+            <span class="tayc-status-icons"
+                ><i data-lucide="wifi"></i><i data-lucide="signal"></i><i data-lucide="battery-full"></i
+            ></span>
+        </div>
+
+        <header class="tayc-topbar">
+            <button class="tayc-icon-button" type="button" data-back aria-label="Back" hidden>
+                <i data-lucide="arrow-left"></i>
+            </button>
+            <span class="tayc-brand-mark" aria-hidden="true"><i data-lucide="split"></i></span>
+            <div class="tayc-topbar-copy">
+                <h1 class="tayc-title" data-app-title>TayC</h1>
+                <p class="tayc-overline" data-app-subtitle>Private gateway</p>
+            </div>
+            <button class="tayc-icon-button" type="button" aria-label="Open gateway logs">
+                <i data-lucide="scroll-text"></i>
+            </button>
+        </header>
+
+        <div class="tayc-toast" data-toast role="status" aria-live="polite"></div>
+
+        <main>
+            <section class="tayc-view" data-view="home" data-active="true">
+                <div class="tayc-hero">
+                    <p class="tayc-state-label">
+                        <span class="tayc-state-dot" data-state-dot></span
+                        ><span data-gateway-state>Gateway running</span>
+                    </p>
+                    <h2 class="tayc-hero-heading">Everything connected</h2>
+                    <p class="tayc-hero-copy">Local services are available through one secure gateway.</p>
+                    <div class="tayc-hero-footer">
+                        <div class="tayc-hero-metrics" aria-label="Gateway summary">
+                            <span class="tayc-hero-metric"><strong>3</strong><span>active</span></span>
+                            <span class="tayc-hero-metric"><strong>5</strong><span>services</span></span>
+                        </div>
+                        <button class="tayc-gateway-button" type="button" data-gateway-toggle>
+                            <i data-lucide="square"></i><span>Stop</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tayc-section-header">
+                    <h2>Quick access</h2>
+                    <button class="tayc-text-button" type="button" data-target="services">View all</button>
+                </div>
+                <div class="tayc-quick-grid">
+                    <button class="tayc-quick-service" type="button" data-service="HTTP Proxy">
+                        <span class="tayc-quick-icon"><i data-lucide="globe-2"></i></span>
+                        <strong>HTTP Proxy</strong>
+                        <span>0.0.0.0:8080</span>
+                    </button>
+                    <button class="tayc-quick-service" type="button" data-service="SOCKS5">
+                        <span class="tayc-quick-icon"><i data-lucide="route"></i></span>
+                        <strong>SOCKS5</strong>
+                        <span>0.0.0.0:1080</span>
+                    </button>
+                </div>
+            </section>
+
+            <section class="tayc-view" data-view="services">
+                <h2 class="tayc-page-heading">Services</h2>
+                <p class="tayc-page-subtitle">Configure endpoints and extensions.</p>
+                <div class="tayc-service-list">
+                    <button class="tayc-service-row" type="button" data-service="FRPC">
+                        <span class="tayc-service-icon"><i data-lucide="radio-tower"></i></span>
+                        <span class="tayc-row-copy"
+                            ><span class="tayc-row-title">FRPC</span
+                            ><span class="tayc-row-subtitle">relay.example.com:7000</span></span
+                        >
+                        <span class="tayc-chevron"><i data-lucide="chevron-right"></i></span>
+                    </button>
+                    <button class="tayc-service-row" type="button" data-service="WebHook">
+                        <span class="tayc-service-icon"><i data-lucide="webhook"></i></span>
+                        <span class="tayc-row-copy"
+                            ><span class="tayc-row-title">WebHook</span
+                            ><span class="tayc-row-subtitle">2 configured channels</span></span
+                        >
+                        <span class="tayc-chevron"><i data-lucide="chevron-right"></i></span>
+                    </button>
+                    <div class="tayc-service-row">
+                        <span class="tayc-service-icon"><i data-lucide="globe-2"></i></span>
+                        <span class="tayc-row-copy"
+                            ><span class="tayc-row-title">HTTP Proxy</span
+                            ><span class="tayc-row-subtitle">0.0.0.0:8080 · Active</span></span
+                        >
+                        <label class="tayc-switch" aria-label="HTTP Proxy enabled"
+                            ><input type="checkbox" checked /><span class="tayc-switch-track"></span
+                        ></label>
+                    </div>
+                    <div class="tayc-service-row">
+                        <span class="tayc-service-icon"><i data-lucide="route"></i></span>
+                        <span class="tayc-row-copy"
+                            ><span class="tayc-row-title">SOCKS5</span
+                            ><span class="tayc-row-subtitle">0.0.0.0:1080 · Active</span></span
+                        >
+                        <label class="tayc-switch" aria-label="SOCKS5 enabled"
+                            ><input type="checkbox" checked /><span class="tayc-switch-track"></span
+                        ></label>
+                    </div>
+                    <div class="tayc-service-row">
+                        <span class="tayc-service-icon"><i data-lucide="bell-ring"></i></span>
+                        <span class="tayc-row-copy"
+                            ><span class="tayc-row-title">Event Listener</span
+                            ><span class="tayc-row-subtitle">Permissions 3/3</span></span
+                        >
+                        <label class="tayc-switch" aria-label="Event Listener enabled"
+                            ><input type="checkbox" /><span class="tayc-switch-track"></span
+                        ></label>
+                    </div>
+                </div>
+            </section>
+
+            <section class="tayc-view" data-view="settings">
+                <h2 class="tayc-page-heading">Settings</h2>
+                <p class="tayc-page-subtitle">System behavior and permissions.</p>
+                <h3 class="tayc-setting-group-title">Connectivity</h3>
+                <div class="tayc-setting-list">
+                    <button class="tayc-setting-row" type="button">
+                        <span class="tayc-setting-icon"><i data-lucide="network"></i></span>
+                        <span class="tayc-row-copy"
+                            ><span class="tayc-row-title">Local network</span
+                            ><span class="tayc-row-subtitle">3 interfaces · 5 addresses</span></span
+                        >
+                        <span class="tayc-chevron"><i data-lucide="chevron-right"></i></span>
+                    </button>
+                </div>
+                <h3 class="tayc-setting-group-title">Background behavior</h3>
+                <div class="tayc-setting-list">
+                    <div class="tayc-setting-row">
+                        <span class="tayc-setting-icon"><i data-lucide="power"></i></span>
+                        <span class="tayc-row-copy"
+                            ><span class="tayc-row-title">Auto start</span
+                            ><span class="tayc-row-subtitle">Start after device boot</span></span
+                        >
+                        <label class="tayc-switch" aria-label="Auto start enabled"
+                            ><input type="checkbox" checked /><span class="tayc-switch-track"></span
+                        ></label>
+                    </div>
+                    <div class="tayc-setting-row">
+                        <span class="tayc-setting-icon"><i data-lucide="panel-top-open"></i></span>
+                        <span class="tayc-row-copy"
+                            ><span class="tayc-row-title">Start with TayC</span
+                            ><span class="tayc-row-subtitle">Run gateway when the app opens</span></span
+                        >
+                        <label class="tayc-switch" aria-label="Start service with app"
+                            ><input type="checkbox" /><span class="tayc-switch-track"></span
+                        ></label>
+                    </div>
+                    <div class="tayc-setting-row">
+                        <span class="tayc-setting-icon"><i data-lucide="bell"></i></span>
+                        <span class="tayc-row-copy"
+                            ><span class="tayc-row-title">Service notification</span
+                            ><span class="tayc-row-subtitle">Keep gateway in foreground</span></span
+                        >
+                        <label class="tayc-switch" aria-label="Service notification enabled"
+                            ><input type="checkbox" checked /><span class="tayc-switch-track"></span
+                        ></label>
+                    </div>
+                    <div class="tayc-setting-row">
+                        <span class="tayc-setting-icon"><i data-lucide="app-window"></i></span>
+                        <span class="tayc-row-copy"
+                            ><span class="tayc-row-title">No window mode</span
+                            ><span class="tayc-row-subtitle">Hide from recent apps</span></span
+                        >
+                        <label class="tayc-switch" aria-label="No window mode"
+                            ><input type="checkbox" /><span class="tayc-switch-track"></span
+                        ></label>
+                    </div>
+                </div>
+            </section>
+
+            <section class="tayc-view" data-view="detail">
+                <div class="tayc-detail-hero">
+                    <span class="tayc-detail-icon"><i data-lucide="radio-tower"></i></span>
+                    <div>
+                        <h2 class="tayc-detail-title" data-detail-title>FRPC</h2>
+                        <p class="tayc-detail-state">Built-in service · Ready</p>
+                    </div>
+                </div>
+                <form class="tayc-form" data-detail-form>
+                    <label class="tayc-field">Server<input type="text" value="relay.example.com" /></label>
+                    <label class="tayc-field">Server port<input type="text" inputmode="numeric" value="7000" /></label>
+                    <label class="tayc-field">Token<input type="password" value="tayc-secure-token" /></label>
+                    <button class="tayc-primary-button" type="submit"><i data-lucide="check"></i>Save changes</button>
+                </form>
+            </section>
+        </main>
+
+        <nav class="tayc-bottom-nav" aria-label="Primary navigation">
+            <button class="tayc-nav-item" type="button" data-target="home" aria-selected="true">
+                <i data-lucide="house"></i><span>Home</span>
+            </button>
+            <button class="tayc-nav-item" type="button" data-target="services" aria-selected="false">
+                <i data-lucide="blocks"></i><span>Services</span>
+            </button>
+            <button class="tayc-nav-item" type="button" data-target="settings" aria-selected="false">
+                <i data-lucide="settings-2"></i><span>Settings</span>
+            </button>
+        </nav>
+    </section>
+
+    <script>
+        (() => {
+            const root = document.getElementById("tayc-compose-prototype");
+            const views = Array.from(root.querySelectorAll("[data-view]"));
+            const navItems = Array.from(root.querySelectorAll(".tayc-nav-item"));
+            const back = root.querySelector("[data-back]");
+            const appTitle = root.querySelector("[data-app-title]");
+            const appSubtitle = root.querySelector("[data-app-subtitle]");
+            const bottomNav = root.querySelector(".tayc-bottom-nav");
+            const toast = root.querySelector("[data-toast]");
+            let rootView = "home";
+
+            function showView(name) {
+                views.forEach((view) => (view.dataset.active = String(view.dataset.view === name)));
+                const isDetail = name === "detail";
+                back.hidden = !isDetail;
+                bottomNav.hidden = isDetail;
+                appTitle.textContent = isDetail ? root.querySelector("[data-detail-title]").textContent : "TayC";
+                appSubtitle.textContent = isDetail ? "Service settings" : "Private gateway";
+                navItems.forEach((item) => item.setAttribute("aria-selected", String(item.dataset.target === name)));
+            }
+
+            root.querySelectorAll("[data-target]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    rootView = button.dataset.target;
+                    showView(rootView);
+                });
+            });
+
+            root.querySelectorAll("[data-service]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    root.querySelector("[data-detail-title]").textContent = button.dataset.service;
+                    showView("detail");
+                });
+            });
+
+            back.addEventListener("click", () => showView(rootView === "home" ? "home" : "services"));
+
+            const gatewayButton = root.querySelector("[data-gateway-toggle]");
+            let running = true;
+            gatewayButton.addEventListener("click", () => {
+                running = !running;
+                root.querySelector("[data-gateway-state]").textContent = running
+                    ? "Gateway running"
+                    : "Gateway stopped";
+                root.querySelector("[data-state-dot]").style.background = running ? "#9cffc3" : "#ffd7d7";
+                gatewayButton.querySelector("span").textContent = running ? "Stop" : "Start";
+                toast.textContent = running ? "Gateway started" : "Gateway stopped";
+                toast.dataset.visible = "true";
+            });
+
+            root.querySelector("[data-detail-form]").addEventListener("submit", (event) => {
+                event.preventDefault();
+                toast.textContent = "Service settings saved";
+                toast.dataset.visible = "true";
+                showView("services");
+            });
+        })();
+    </script>
+</div>

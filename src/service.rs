@@ -1,6 +1,6 @@
 use crate::{
     frp::frp_binary,
-    paths::{config_home, loc_relay_home, user_home},
+    paths::{config_home, tayc_home, user_home},
     Result,
 };
 use std::{
@@ -9,12 +9,9 @@ use std::{
     process::{Command, Stdio},
 };
 
-const SYSTEMD_SERVICE: &str = "tayd-frpc.service";
-const LEGACY_SYSTEMD_SERVICE: &str = "loc-relay-frpc.service";
-const LAUNCHD_LABEL: &str = "com.cclilshy.tayd.frpc";
-const LEGACY_LAUNCHD_LABEL: &str = "com.cclilshy.locrelay.frpc";
-const WINDOWS_STARTUP: &str = "tayd-frpc.cmd";
-const LEGACY_WINDOWS_STARTUP: &str = "loc-relay-frpc.cmd";
+const SYSTEMD_SERVICE: &str = "tayc-frpc.service";
+const LAUNCHD_LABEL: &str = "com.cclilshy.tayc.frpc";
+const WINDOWS_STARTUP: &str = "tayc-frpc.cmd";
 
 pub(crate) fn install_service() -> Result<()> {
     if cfg!(target_os = "linux") {
@@ -44,11 +41,6 @@ pub(crate) fn service_status() -> Result<()> {
     let path = service_file_path()?;
     if path.exists() {
         println!("installed: {}", path.display());
-    } else if legacy_service_file_path()?.exists() {
-        println!(
-            "installed legacy: {}",
-            legacy_service_file_path()?.display()
-        );
     } else {
         println!("not installed");
     }
@@ -56,62 +48,33 @@ pub(crate) fn service_status() -> Result<()> {
 }
 
 fn service_file_path() -> Result<PathBuf> {
-    service_file_path_for(false)
-}
-
-fn legacy_service_file_path() -> Result<PathBuf> {
-    service_file_path_for(true)
-}
-
-fn service_file_path_for(legacy: bool) -> Result<PathBuf> {
     if cfg!(target_os = "linux") {
-        Ok(config_home()?.join("systemd/user").join(if legacy {
-            LEGACY_SYSTEMD_SERVICE
-        } else {
-            SYSTEMD_SERVICE
-        }))
+        Ok(config_home()?.join("systemd/user").join(SYSTEMD_SERVICE))
     } else if cfg!(target_os = "macos") {
-        let label = if legacy {
-            LEGACY_LAUNCHD_LABEL
-        } else {
-            LAUNCHD_LABEL
-        };
         Ok(user_home()?
             .join("Library/LaunchAgents")
-            .join(format!("{label}.plist")))
+            .join(format!("{LAUNCHD_LABEL}.plist")))
     } else if cfg!(windows) {
-        let name = if legacy {
-            LEGACY_WINDOWS_STARTUP
-        } else {
-            WINDOWS_STARTUP
-        };
         let appdata = env::var_os("APPDATA").ok_or("APPDATA is not set")?;
         Ok(PathBuf::from(appdata)
             .join(r"Microsoft\Windows\Start Menu\Programs\Startup")
-            .join(name))
+            .join(WINDOWS_STARTUP))
     } else {
         Err(format!("service is not supported on {}", env::consts::OS).into())
     }
 }
 
 fn install_systemd_user_service() -> Result<()> {
-    let home = loc_relay_home()?;
+    let home = tayc_home()?;
     let path = service_file_path()?;
-    let legacy_path = legacy_service_file_path()?;
     fs::create_dir_all(path.parent().ok_or("invalid service path")?)?;
     let content = format!(
-        "[Unit]\nDescription=tayd frpc\nAfter=network-online.target\n\n[Service]\nWorkingDirectory={home}\nExecStart={frpc} -c {home}/frpc.toml\nRestart=always\nRestartSec=3\n\n[Install]\nWantedBy=default.target\n",
+        "[Unit]\nDescription=tayc frpc\nAfter=network-online.target\n\n[Service]\nWorkingDirectory={home}\nExecStart={frpc} -c {home}/frpc.toml\nRestart=always\nRestartSec=3\n\n[Install]\nWantedBy=default.target\n",
         home = home.display(),
-        frpc = frp_binary("frpc")?.display()
+        frpc = frp_binary(&home, "frpc")?.display()
     );
     fs::write(&path, content)?;
     if !skip_service_enable() {
-        if legacy_path.exists() {
-            let _ = Command::new("systemctl")
-                .args(["--user", "disable", "--now", LEGACY_SYSTEMD_SERVICE])
-                .status();
-            let _ = fs::remove_file(&legacy_path);
-        }
         let _ = Command::new("systemctl")
             .args(["--user", "daemon-reload"])
             .status();
@@ -125,17 +88,12 @@ fn install_systemd_user_service() -> Result<()> {
 
 fn uninstall_systemd_user_service() -> Result<()> {
     let path = service_file_path()?;
-    let legacy_path = legacy_service_file_path()?;
     if !skip_service_enable() {
         let _ = Command::new("systemctl")
             .args(["--user", "disable", "--now", SYSTEMD_SERVICE])
             .status();
-        let _ = Command::new("systemctl")
-            .args(["--user", "disable", "--now", LEGACY_SYSTEMD_SERVICE])
-            .status();
     }
     let _ = fs::remove_file(&path);
-    let _ = fs::remove_file(&legacy_path);
     if !skip_service_enable() {
         let _ = Command::new("systemctl")
             .args(["--user", "daemon-reload"])
@@ -146,9 +104,8 @@ fn uninstall_systemd_user_service() -> Result<()> {
 }
 
 fn install_launchd_service() -> Result<()> {
-    let home = loc_relay_home()?;
+    let home = tayc_home()?;
     let path = service_file_path()?;
-    let legacy_path = legacy_service_file_path()?;
     fs::create_dir_all(path.parent().ok_or("invalid service path")?)?;
     let content = format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -172,22 +129,12 @@ fn install_launchd_service() -> Result<()> {
 "#,
         label = LAUNCHD_LABEL,
         home = xml_escape(&home.display().to_string()),
-        frpc = xml_escape(&frp_binary("frpc")?.display().to_string())
+        frpc = xml_escape(&frp_binary(&home, "frpc")?.display().to_string())
     );
     fs::write(&path, content)?;
     if !skip_service_enable() {
         let uid = Command::new("id").arg("-u").output()?;
         let uid = String::from_utf8_lossy(&uid.stdout).trim().to_owned();
-        if legacy_path.exists() {
-            let _ = Command::new("launchctl")
-                .args([
-                    "bootout",
-                    &format!("gui/{uid}"),
-                    legacy_path.to_string_lossy().as_ref(),
-                ])
-                .status();
-            let _ = fs::remove_file(&legacy_path);
-        }
         let _ = Command::new("launchctl")
             .args([
                 "bootstrap",
@@ -205,7 +152,6 @@ fn install_launchd_service() -> Result<()> {
 
 fn uninstall_launchd_service() -> Result<()> {
     let path = service_file_path()?;
-    let legacy_path = legacy_service_file_path()?;
     if !skip_service_enable() {
         let uid = Command::new("id").arg("-u").output()?;
         let uid = String::from_utf8_lossy(&uid.stdout).trim().to_owned();
@@ -216,105 +162,86 @@ fn uninstall_launchd_service() -> Result<()> {
                 path.to_string_lossy().as_ref(),
             ])
             .status();
-        let _ = Command::new("launchctl")
-            .args([
-                "bootout",
-                &format!("gui/{uid}"),
-                legacy_path.to_string_lossy().as_ref(),
-            ])
-            .status();
     }
     let _ = fs::remove_file(&path);
-    let _ = fs::remove_file(&legacy_path);
     println!("removed service: {}", path.display());
     Ok(())
 }
 
 fn install_windows_startup() -> Result<()> {
-    let home = loc_relay_home()?;
+    let home = tayc_home()?;
     let path = service_file_path()?;
-    let legacy_path = legacy_service_file_path()?;
     fs::create_dir_all(path.parent().ok_or("invalid startup path")?)?;
     let config = home.join("frpc.toml");
     let content = format!(
         "@echo off\r\ncd /d \"{home}\"\r\nstart \"\" \"{frpc}\" -c \"{config}\"\r\n",
         home = home.display(),
-        frpc = frp_binary("frpc")?.display(),
+        frpc = frp_binary(&home, "frpc")?.display(),
         config = config.display()
     );
     fs::write(&path, content)?;
-    let _ = fs::remove_file(&legacy_path);
     println!("installed startup command: {}", path.display());
     Ok(())
 }
 
 fn uninstall_windows_startup() -> Result<()> {
     let path = service_file_path()?;
-    let legacy_path = legacy_service_file_path()?;
     let _ = fs::remove_file(&path);
-    let _ = fs::remove_file(&legacy_path);
     println!("removed startup command: {}", path.display());
     Ok(())
 }
 
-pub(crate) fn remove_loc_relay_symlink(home: &Path) -> Result<()> {
+pub(crate) fn remove_tayc_symlink(home: &Path) -> Result<()> {
     let user_home = match user_home() {
         Ok(path) => path,
         Err(_) => return Ok(()),
     };
 
     if cfg!(windows) {
-        for name in ["tayd.cmd", "loc-relay.cmd"] {
-            let cmd = user_home.join(".local/bin").join(name);
-            let data = match fs::read_to_string(&cmd) {
-                Ok(data) => data,
-                Err(err) if err.kind() == io::ErrorKind::NotFound => continue,
-                Err(err) => return Err(err.into()),
-            };
-            if data.contains(&home.display().to_string()) {
-                fs::remove_file(cmd)?;
-            }
+        let cmd = user_home.join(".local/bin/tayc.cmd");
+        let data = match fs::read_to_string(&cmd) {
+            Ok(data) => data,
+            Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(()),
+            Err(err) => return Err(err.into()),
+        };
+        if data.contains(&home.display().to_string()) {
+            fs::remove_file(cmd)?;
         }
         return Ok(());
     }
 
-    for name in ["tayd", "loc-relay"] {
-        let link = user_home.join(".local/bin").join(name);
-        let target = match fs::read_link(&link) {
-            Ok(target) => target,
-            Err(err) if err.kind() == io::ErrorKind::NotFound => continue,
-            Err(err) => return Err(err.into()),
-        };
-        let resolved = if target.is_absolute() {
-            target
-        } else {
-            link.parent().unwrap_or_else(|| Path::new(".")).join(target)
-        };
-        if resolved.starts_with(home) {
-            fs::remove_file(link)?;
-        }
+    let link = user_home.join(".local/bin/tayc");
+    let target = match fs::read_link(&link) {
+        Ok(target) => target,
+        Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(err) => return Err(err.into()),
+    };
+    let resolved = if target.is_absolute() {
+        target
+    } else {
+        link.parent().unwrap_or_else(|| Path::new(".")).join(target)
+    };
+    if resolved.starts_with(home) {
+        fs::remove_file(link)?;
     }
     Ok(())
 }
 
 pub(crate) fn restart_service_if_running() -> Result<bool> {
     if cfg!(target_os = "linux") {
-        for service in [SYSTEMD_SERVICE, LEGACY_SYSTEMD_SERVICE] {
-            let active = match Command::new("systemctl")
-                .args(["--user", "is-active", "--quiet", service])
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .status()
-            {
-                Ok(status) => status.success(),
-                Err(err) if err.kind() == io::ErrorKind::NotFound => false,
-                Err(err) => return Err(err.into()),
-            };
-            if !active {
-                continue;
-            }
+        let active = match Command::new("systemctl")
+            .args(["--user", "is-active", "--quiet", SYSTEMD_SERVICE])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+        {
+            Ok(status) => status.success(),
+            Err(err) if err.kind() == io::ErrorKind::NotFound => false,
+            Err(err) => return Err(err.into()),
+        };
+        if active {
             let status = Command::new("systemctl")
-                .args(["--user", "restart", service])
+                .args(["--user", "restart", SYSTEMD_SERVICE])
                 .status()?;
             if !status.success() {
                 return Err(format!("systemctl restart exited with {status}").into());
@@ -326,21 +253,18 @@ pub(crate) fn restart_service_if_running() -> Result<bool> {
 
     if cfg!(target_os = "macos") {
         let uid = current_uid()?;
-        for label in [LAUNCHD_LABEL, LEGACY_LAUNCHD_LABEL] {
-            let service = format!("gui/{uid}/{label}");
-            let active = match Command::new("launchctl")
-                .args(["print", &service])
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .status()
-            {
-                Ok(status) => status.success(),
-                Err(err) if err.kind() == io::ErrorKind::NotFound => false,
-                Err(err) => return Err(err.into()),
-            };
-            if !active {
-                continue;
-            }
+        let service = format!("gui/{uid}/{LAUNCHD_LABEL}");
+        let active = match Command::new("launchctl")
+            .args(["print", &service])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+        {
+            Ok(status) => status.success(),
+            Err(err) if err.kind() == io::ErrorKind::NotFound => false,
+            Err(err) => return Err(err.into()),
+        };
+        if active {
             let status = Command::new("launchctl")
                 .args(["kickstart", "-k", &service])
                 .status()?;
@@ -356,8 +280,7 @@ pub(crate) fn restart_service_if_running() -> Result<bool> {
 }
 
 fn skip_service_enable() -> bool {
-    env::var("TAYD_SERVICE_SKIP_ENABLE").ok().as_deref() == Some("1")
-        || env::var("LOC_RELAY_SERVICE_SKIP_ENABLE").ok().as_deref() == Some("1")
+    env::var("TAYC_SERVICE_SKIP_ENABLE").ok().as_deref() == Some("1")
 }
 
 fn current_uid() -> Result<String> {

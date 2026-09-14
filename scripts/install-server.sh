@@ -1,19 +1,9 @@
 #!/bin/sh
 set -eu
 
-REPO_URL=${REPO_URL:-https://github.com/cclilshy/tayd.git}
-RAW_BASE_URL=${RAW_BASE_URL:-https://raw.githubusercontent.com/cclilshy/tayd/main/scripts}
-if [ -z "${INSTALL_DIR:-}" ] && [ -z "${SERVER_INSTALL_DIR:-}" ]; then
-    if [ -d "$HOME/.tayd-server" ]; then
-        INSTALL_DIR="$HOME/.tayd-server"
-    elif [ -d "$HOME/.loc-relay-server" ]; then
-        INSTALL_DIR="$HOME/.loc-relay-server"
-    else
-        INSTALL_DIR="$HOME/.tayd-server"
-    fi
-else
-    INSTALL_DIR=${INSTALL_DIR:-$SERVER_INSTALL_DIR}
-fi
+REPO_URL=${REPO_URL:-https://github.com/cclilshy/tayc.git}
+RAW_BASE_URL=${RAW_BASE_URL:-https://raw.githubusercontent.com/cclilshy/tayc/main/scripts}
+INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayd-server"}
 SERVER_PORT_EXPLICIT=0
 [ -n "${SERVER_PORT:-}" ] && SERVER_PORT_EXPLICIT=1
 SERVER_PORT=${SERVER_PORT:-7000}
@@ -210,9 +200,7 @@ select_tayd_binary() {
     target=$(tayd_target)
     for candidate in \
         "$INSTALL_DIR/bin/tayd-$target" \
-        "$INSTALL_DIR/bin/loc-relay-$target" \
-        "$INSTALL_DIR/bin/tayd" \
-        "$INSTALL_DIR/bin/loc-relay"; do
+        "$INSTALL_DIR/bin/tayd"; do
         if [ -x "$candidate" ]; then
             printf '%s\n' "$candidate"
             return
@@ -226,9 +214,6 @@ install_tayd_command() {
     tayd_bin=$1
     mkdir -p "$BIN_DIR"
     ln -sf "$tayd_bin" "$BIN_DIR/tayd"
-    if [ -L "$BIN_DIR/loc-relay" ]; then
-        rm -f "$BIN_DIR/loc-relay"
-    fi
 
     case ":$PATH:" in
     *":$BIN_DIR:"*)
@@ -265,9 +250,9 @@ if [ "$HTTPS_PORT_EXPLICIT" != "1" ] && [ -n "${EXISTING_HTTPS_PORT:-}" ]; then
 fi
 
 TAYD_BIN=$(select_tayd_binary)
-INSTALL_DIR="$INSTALL_DIR" "$INSTALL_DIR/scripts/install-frp.sh"
+INSTALL_DIR="$INSTALL_DIR" "$INSTALL_DIR/scripts/install-frp.sh" frps
 install_tayd_command "$TAYD_BIN"
-set -- init-server --token "$TOKEN" --port "$SERVER_PORT" --addr "$addr" --raw-base-url "$RAW_BASE_URL"
+set -- init --token "$TOKEN" --port "$SERVER_PORT" --addr "$addr" --raw-base-url "$RAW_BASE_URL"
 if [ -n "$HTTP_PORT" ]; then
 	set -- "$@" --http-port "$HTTP_PORT"
 fi
@@ -278,7 +263,7 @@ fi
 touch "$INSTALL_DIR/.tayd-server"
 
 if [ "$SKIP_START" != "1" ]; then
-	"$TAYD_BIN" server restart
+	"$TAYD_BIN" restart
 fi
 
 "$TAYD_BIN" info

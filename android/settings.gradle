@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'TaydAndroid'
+rootProject.name = 'TayCAndroid'
 include ':app'

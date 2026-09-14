@@ -1,18 +1,18 @@
 use crate::{
     endpoint::{frp_proxy_name, proxy_types},
     model::{Proxy, State},
-    paths::{loc_relay_home, write_private},
+    paths::{tayc_home, write_private},
     Result,
 };
 use std::{
     ffi::OsStr,
     fs, io,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
 pub(crate) fn render_state(state: &State) -> Result<()> {
-    let home = loc_relay_home()?;
+    let home = tayc_home()?;
     let proxy_dir = home.join("frpc.d");
     fs::create_dir_all(&proxy_dir)?;
 
@@ -112,10 +112,10 @@ pub(crate) fn render_proxy(proxy: &Proxy) -> Result<String> {
     Ok(config)
 }
 
-pub(crate) fn run_frp(binary: &str, args: &[&str]) -> Result<()> {
-    let status = Command::new(frp_binary(binary)?)
+pub(crate) fn run_frp(home: &Path, binary: &str, args: &[&str]) -> Result<()> {
+    let status = Command::new(frp_binary(home, binary)?)
         .args(args)
-        .current_dir(loc_relay_home()?)
+        .current_dir(home)
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -126,16 +126,16 @@ pub(crate) fn run_frp(binary: &str, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn start_process(binary: &str, args: &[&str]) -> Result<()> {
-    start_process_with_announce(binary, args, true)
+pub(crate) fn start_process(home: &Path, binary: &str, args: &[&str]) -> Result<()> {
+    start_process_with_announce(home, binary, args, true)
 }
 
 pub(crate) fn start_process_with_announce(
+    home: &Path,
     binary: &str,
     args: &[&str],
     announce: bool,
 ) -> Result<()> {
-    let home = loc_relay_home()?;
     let pid_file = home.join(format!("{binary}.pid"));
     if pid_file.exists() {
         return Err(format!("{binary} already has pid file: {}", pid_file.display()).into());
@@ -146,7 +146,7 @@ pub(crate) fn start_process_with_announce(
         .append(true)
         .open(home.join(format!("{binary}.log")))?;
     let err_log = log.try_clone()?;
-    let child = Command::new(frp_binary(binary)?)
+    let child = Command::new(frp_binary(home, binary)?)
         .args(args)
         .current_dir(&home)
         .stdin(Stdio::null())
@@ -160,12 +160,11 @@ pub(crate) fn start_process_with_announce(
     Ok(())
 }
 
-pub(crate) fn stop_process(binary: &str) -> Result<()> {
-    stop_process_with_announce(binary, true)
+pub(crate) fn stop_process(home: &Path, binary: &str) -> Result<()> {
+    stop_process_with_announce(home, binary, true)
 }
 
-pub(crate) fn stop_process_with_announce(binary: &str, announce: bool) -> Result<()> {
-    let home = loc_relay_home()?;
+pub(crate) fn stop_process_with_announce(home: &Path, binary: &str, announce: bool) -> Result<()> {
     let pid_file = home.join(format!("{binary}.pid"));
     if !pid_file.exists() {
         return Ok(());
@@ -181,13 +180,13 @@ pub(crate) fn stop_process_with_announce(binary: &str, announce: bool) -> Result
     Ok(())
 }
 
-pub(crate) fn frp_binary(binary: &str) -> io::Result<PathBuf> {
+pub(crate) fn frp_binary(home: &Path, binary: &str) -> io::Result<PathBuf> {
     let name = if cfg!(windows) {
         format!("{binary}.exe")
     } else {
         binary.to_owned()
     };
-    Ok(loc_relay_home()?.join("bin").join(name))
+    Ok(home.join("bin").join(name))
 }
 
 fn kill_pid(pid: &str) -> io::Result<()> {

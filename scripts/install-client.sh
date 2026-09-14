@@ -1,18 +1,8 @@
 #!/bin/sh
 set -eu
 
-REPO_URL=${REPO_URL:-https://github.com/cclilshy/tayd.git}
-if [ -z "${INSTALL_DIR:-}" ] && [ -z "${CLIENT_INSTALL_DIR:-}" ]; then
-	if [ -d "$HOME/.tayd-client" ]; then
-		INSTALL_DIR="$HOME/.tayd-client"
-	elif [ -d "$HOME/.loc-relay-client" ]; then
-		INSTALL_DIR="$HOME/.loc-relay-client"
-	else
-		INSTALL_DIR="$HOME/.tayd-client"
-	fi
-else
-	INSTALL_DIR=${INSTALL_DIR:-$CLIENT_INSTALL_DIR}
-fi
+REPO_URL=${REPO_URL:-https://github.com/cclilshy/tayc.git}
+INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayc-client"}
 BIN_DIR=${BIN_DIR:-"$HOME/.local/bin"}
 SERVER_ADDR=${1:-${SERVER_ADDR:-}}
 TOKEN=${2:-${TOKEN:-}}
@@ -42,7 +32,7 @@ clone_or_update() {
 	fi
 }
 
-tayd_target() {
+tayc_target() {
 	os=$(uname -s | tr '[:upper:]' '[:lower:]')
 	arch=$(uname -m)
 	case "$arch" in
@@ -59,29 +49,24 @@ tayd_target() {
 	printf '%s-%s\n' "$os" "$arch"
 }
 
-select_tayd_binary() {
-	target=$(tayd_target)
+select_tayc_binary() {
+	target=$(tayc_target)
 	for candidate in \
-		"$INSTALL_DIR/bin/tayd-$target" \
-		"$INSTALL_DIR/bin/loc-relay-$target" \
-		"$INSTALL_DIR/bin/tayd" \
-		"$INSTALL_DIR/bin/loc-relay"; do
+		"$INSTALL_DIR/bin/tayc-$target" \
+		"$INSTALL_DIR/bin/tayc"; do
 		if [ -x "$candidate" ]; then
 			printf '%s\n' "$candidate"
 			return
 		fi
 	done
 
-	die "no prebuilt tayd binary for $target; run ./build.sh before publishing"
+	die "no prebuilt tayc binary for $target; run ./build.sh before publishing"
 }
 
-install_tayd_command() {
-	tayd_bin=$1
+install_tayc_command() {
+	tayc_bin=$1
 	mkdir -p "$BIN_DIR"
-	ln -sf "$tayd_bin" "$BIN_DIR/tayd"
-	if [ -L "$BIN_DIR/loc-relay" ]; then
-		rm -f "$BIN_DIR/loc-relay"
-	fi
+	ln -sf "$tayc_bin" "$BIN_DIR/tayc"
 
 	case ":$PATH:" in
 	*":$BIN_DIR:"*)
@@ -89,7 +74,7 @@ install_tayd_command() {
 		;;
 	esac
 
-	echo "Use $BIN_DIR/tayd when tayd is not in PATH."
+	echo "Use $BIN_DIR/tayc when tayc is not in PATH."
 }
 
 [ -n "$SERVER_ADDR" ] || die "usage: install-client.sh <server_addr> <token>"
@@ -97,10 +82,10 @@ install_tayd_command() {
 
 clone_or_update
 
-TAYD_BIN=$(select_tayd_binary)
-INSTALL_DIR="$INSTALL_DIR" "$INSTALL_DIR/scripts/install-frp.sh"
+TAYC_BIN=$(select_tayc_binary)
+INSTALL_DIR="$INSTALL_DIR" "$INSTALL_DIR/scripts/install-frp.sh" frpc
 
-"$TAYD_BIN" init \
+"$TAYC_BIN" init \
 	--server "$SERVER_ADDR" \
 	--token "$TOKEN" \
 	--server-port "$SERVER_PORT"
@@ -118,29 +103,29 @@ if [ -n "$PROXY_NAME" ] || [ -n "$LOCAL_ENDPOINT" ] || [ -n "$LOCAL_PORT" ] || [
 		fi
 	fi
 
-	"$TAYD_BIN" remove "$PROXY_NAME" --no-restart >/dev/null 2>&1 || true
+	"$TAYC_BIN" remove "$PROXY_NAME" --no-restart >/dev/null 2>&1 || true
 	if [ -n "$PROXY_TYPE" ]; then
-		"$TAYD_BIN" add "$PROXY_NAME" "$LOCAL_ENDPOINT" "$REMOTE_PORT" --type "$PROXY_TYPE" --no-restart
+		"$TAYC_BIN" add "$PROXY_NAME" "$LOCAL_ENDPOINT" "$REMOTE_PORT" --type "$PROXY_TYPE" --no-restart
 	else
-		"$TAYD_BIN" add "$PROXY_NAME" "$LOCAL_ENDPOINT" "$REMOTE_PORT" --no-restart
+		"$TAYC_BIN" add "$PROXY_NAME" "$LOCAL_ENDPOINT" "$REMOTE_PORT" --no-restart
 	fi
 	proxy_configured=1
 fi
 
-touch "$INSTALL_DIR/.tayd-client"
-install_tayd_command "$TAYD_BIN"
+touch "$INSTALL_DIR/.tayc-client"
+install_tayc_command "$TAYC_BIN"
 
 if [ "$SKIP_START" != "1" ]; then
-	"$TAYD_BIN" restart
+	"$TAYC_BIN" restart
 	echo "[restarted] client gateway"
 else
 	echo "[saved] start skipped"
 fi
 
-echo "[installed] tayd client -> $INSTALL_DIR"
+echo "[installed] tayc client -> $INSTALL_DIR"
 echo "[server] $SERVER_ADDR:$SERVER_PORT"
-echo "[command] $BIN_DIR/tayd"
+echo "[command] $BIN_DIR/tayc"
 if [ "$proxy_configured" = "1" ]; then
 	echo "[proxy] $PROXY_NAME $LOCAL_ENDPOINT -> $REMOTE_PORT"
 fi
-echo "[uninstall] $BIN_DIR/tayd uninstall"
+echo "[uninstall] $BIN_DIR/tayc uninstall"

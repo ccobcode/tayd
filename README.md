@@ -1,88 +1,158 @@
-# tayd
+# tayd / tayc
 
-一个基于 [frp](https://github.com/fatedier/frp) 开发的本地服务发布工具, 它把 frp 的安装配置生成和服务管理收进一个多端统一的客户端, 适合把本机 Web、TCP 或 UDP 服务发布到自己的公网服务器。
+一个基于 [frp](https://github.com/fatedier/frp) 的本地服务发布工具，将本机 Web、TCP 或 UDP 服务发布到自己的公网服务器。服务端和客户端使用独立的命令与运行目录。
+
+| 命令 | 职责 | 安装脚本默认目录 |
+| --- | --- | --- |
+| `tayd` | 服务端，管理 `frps` | `~/.tayd-server` |
+| `tayc` | 客户端，管理 `frpc` 和端口映射 | `~/.tayc-client` |
+
+Android 客户端名为 **TayC**，内置 `frpc`、本地代理与事件转发模块。
 
 ## 快速开始
 
 ### 服务端安装
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/cclilshy/tayd/main/scripts/install-server.sh | sh
-```
-
-自定义hostname
-
-> 当http(s)端口被声明时, 允许多个服务占用服务端http端口, frp会根据host进行路由
+将 `HOST` 替换为客户端可访问的服务器域名或 IP，默认连接端口为 `7000`：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/cclilshy/tayd/main/scripts/install-server.sh | sh -s -- <server-hostname> #--http-port 80 --https-port 443
+curl -fsSL https://raw.githubusercontent.com/cclilshy/tayc/main/scripts/install-server.sh | sh -s -- HOST
 ```
 
-服务端安装完成后会打印客户端安装命令
-
-<img src="assets/server.png" alt="安装结果" width="720">
-
-## 基础用法
-
-添加第一个映射
+需要按域名发布 HTTP/HTTPS 服务时，声明对应的服务端监听端口：
 
 ```sh
-tayd add web 8080 18080
+curl -fsSL https://raw.githubusercontent.com/cclilshy/tayc/main/scripts/install-server.sh | sh -s -- HOST --http-port 80 --https-port 443
 ```
 
-访问
+多个 HTTP/HTTPS 映射可以共享对应的监听端口，由 frp 按域名路由。
+
+安装完成后会打印连接信息、Linux/macOS 与 Windows PowerShell 客户端安装命令，以及 Android 扫码配置用的二维码。
+
+```sh
+tayd info       # 再次显示连接信息、安装命令和二维码
+tayd restart    # 重启 frps
+```
+
+### 客户端安装
+
+在客户端执行服务端输出的对应平台安装命令，安装后使用 `tayc` 管理映射。Unix 命令入口为 `~/.local/bin/tayc`，Windows 为 `$HOME\.local\bin\tayc.cmd`。
+
+## 客户端基础用法
+
+### 发布 Web / TCP 服务
+
+```sh
+tayc add web 3000 18080
+```
+
+对应的访问关系：
 
 ```text
-http://<server-hostname>:18080 -> 127.0.0.1:8080
+http://HOST:18080 -> 127.0.0.1:3000
 ```
 
-## 安卓客户端
+### 按域名发布 HTTP 服务
 
-Android 客户端在 `frpc` 页面点 `Scan server QR`, 扫描成功后自动完成配置
+服务端需已启用 `--http-port`，并将域名解析到服务端：
+
+```sh
+tayc add site 3000 http://site.example.com
+```
+
+HTTPS 映射使用 `https://` 远端地址，服务端需启用 `--https-port`。
+
+### 发布 UDP 服务
+
+```sh
+tayc add dns udp://5353 5353
+```
+
+### 管理映射与运行状态
+
+```sh
+tayc list              # 列出映射
+tayc show web          # 查看指定映射
+tayc remove web        # 删除映射
+tayc verify            # 校验 frpc 配置
+tayc install           # 直接启动 frpc，不注册系统服务
+tayc restart           # 重启 frpc
+tayc help              # 查看完整命令和参数
+```
+
+`add` / `remove` 会保存映射并重新生成配置；如果客户端已在运行，会尝试重启以应用修改。未运行时只保存配置。使用 `--no-restart` 可跳过自动重启。
+
+需要系统自启动时使用独立的服务命令，支持 Linux systemd、macOS launchd 与 Windows 启动项：
+
+```sh
+tayc service install
+tayc service status
+tayc service uninstall
+```
+
+`service uninstall` 用于移除系统服务或启动项，保留客户端安装目录。
+
+## Android 客户端 TayC
+
+使用 **Jetpack Compose / Material 3** 界面，支持 **Android 8.0+（API 26）**，提供英文和简体中文，主导航为 **首页 / 服务 / 设置**（Home / Services / Settings）。
+
+扫码连接服务端：
+
+1. 在服务端运行 `tayd info` 显示二维码。
+2. 在 TayC 的 **服务 → FRPC** 页面点击 **扫描服务器二维码**（Scan server QR）。
+3. 扫码导入服务端地址、端口与 Token。
 
 ### 内置模块
 
-<!-- prettier-ignore -->
 | 模块 | 用途 |
 | --- | --- |
-| FRPC | 内置 `frpc` 客户端 |
-| WebHook | WebHook channels |
-| HTTP PROXY | 本机 HTTP 代理 |
-| SOCKS5 | 本机 Socks5 代理 |
-| Event Listener | 事件分发 |
+| FRPC | 内置 `frpc` 客户端，配置服务端与端口映射 |
+| WebHook | 配置 WebHook 通道，转发订阅的事件 |
+| HTTP Proxy | 本机 HTTP / CONNECT 代理 |
+| SOCKS5 | 本机 SOCKS5 代理 |
+| Event Listener | 订阅来电、短信与应用通知事件 |
 
-<img src="assets/android.png" alt="Android 客户端扫码配置" width="360">
+构建、权限和运行配置见 [Android 文档](android/README.md)。
 
-## 常用场景
+## 运行目录与版本迁移
 
-把本机 Web 服务暴露到公网端口
+- 安装脚本默认将服务端放在 `~/.tayd-server`，客户端放在 `~/.tayc-client`。
+- 直接运行二进制时，可通过 `TAYD_HOME` / `TAYC_HOME` 指定对应的运行目录；未设置时按二进制所在位置推导，而不是固定使用上述默认目录。
+- 客户端命令已从 `tayd add` 等切换为 `tayc add`；旧的 `up` / `down`、`init-server`、`server` 等命令不再使用。
+- 当前版本不自动迁移旧客户端目录、配置或旧名称的系统自启动项。
+- Android 应用标识已改为 `com.cclilshy.tayc`，与旧的 `com.cclilshy.tayd` 是独立应用，旧应用数据需单独迁移。
+- 服务端二维码协议已切换为 `tayc://server`，扫码时使用当前版本 `tayd info` 生成的二维码。
 
-```sh
-tayd add web 3000 18080
-```
+## 停止与卸载
 
-用域名访问本机 HTTP 服务
-
-```sh
-tayd add site 3000 http://site.example.com
-```
-
-UDP 服务
-
-```sh
-tayd add dns udp://5353 5353
-```
-
-## 卸载
-
-Unix:
+服务端的 `uninstall` **只停止 frps**，保留安装目录、配置和命令入口；需要恢复运行时执行 `tayd install`：
 
 ```sh
 ~/.local/bin/tayd uninstall
 ```
 
-Windows PowerShell:
+客户端的 `uninstall` 会停止 frpc、移除当前 TayC 自启动项和命令入口，并**删除整个客户端安装目录及其中的配置**。
+
+Unix：
+
+```sh
+~/.local/bin/tayc uninstall
+```
+
+Windows PowerShell：
 
 ```powershell
-& "$HOME\.local\bin\tayd.cmd" uninstall
+& "$HOME\.local\bin\tayc.cmd" uninstall
 ```
+
+## 开发与验证
+
+本机构建两个 CLI 并运行 Rust 单元测试；Shell 集成测试需要可用的 Docker 环境，脚本会自动在容器中运行。
+
+```sh
+cargo build --release --bins
+cargo test
+bash tests/tayd-tayc.sh
+```
+
+多平台 CLI 构建使用 [build.sh](build.sh)，输出 `tayd-*` 和 `tayc-*` 两组二进制；Android 构建步骤见 [android/README.md](android/README.md)。

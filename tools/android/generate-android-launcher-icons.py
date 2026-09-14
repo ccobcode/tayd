@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-from math import hypot
 from pathlib import Path
 
 from PIL import Image
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "static" / "icon.png"
 RES = ROOT / "android" / "app" / "src" / "main" / "res"
 
@@ -17,90 +16,76 @@ DENSITIES = {
     "xxxhdpi": 4,
 }
 
-VISIBLE_THRESHOLD = 32
-ALPHA_TRANSPARENT_THRESHOLD = 4
-ALPHA_OPAQUE_THRESHOLD = 40
-SAFE_RADIUS_DP = 33
-SAFE_RADIUS_FILL = 0.95
+ADAPTIVE_LAYER_DP = 108
+ADAPTIVE_ARTWORK_DP = 96
+ADAPTIVE_BACKGROUND = (19, 28, 37, 255)
+MONO_TRANSPARENT_THRESHOLD = 40
+MONO_OPAQUE_THRESHOLD = 64
 
 
-def visible_points(image):
-    pixels = image.load()
-    width, height = image.size
-    points = []
-    for y in range(height):
-        for x in range(width):
-            if max(pixels[x, y]) > VISIBLE_THRESHOLD:
-                points.append((x, y))
-    if not points:
-        raise RuntimeError(f"{SOURCE} does not contain visible icon pixels")
-    return points
-
-
-def alpha_from_black(image):
-    result = image.convert("RGBA")
-    pixels = result.load()
-    width, height = result.size
-    for y in range(height):
-        for x in range(width):
-            r, g, b, _ = pixels[x, y]
-            strongest = max(r, g, b)
-            if strongest <= ALPHA_TRANSPARENT_THRESHOLD:
-                alpha = 0
-            elif strongest >= ALPHA_OPAQUE_THRESHOLD:
-                alpha = 255
-            else:
-                alpha = round(
-                    255
-                    * (strongest - ALPHA_TRANSPARENT_THRESHOLD)
-                    / (ALPHA_OPAQUE_THRESHOLD - ALPHA_TRANSPARENT_THRESHOLD)
-                )
-            pixels[x, y] = (r, g, b, alpha)
-    return result
-
-
-def save_foreground(source, center, radius):
+def save_foreground(source):
     for density, density_scale in DENSITIES.items():
-        layer_px = int(108 * density_scale)
-        safe_radius_px = SAFE_RADIUS_DP * density_scale
-        source_scale = safe_radius_px * SAFE_RADIUS_FILL / radius
-        source_size = (
-            max(1, round(source.width * source_scale)),
-            max(1, round(source.height * source_scale)),
+        layer_px = int(ADAPTIVE_LAYER_DP * density_scale)
+        artwork_px = int(ADAPTIVE_ARTWORK_DP * density_scale)
+        foreground = source.resize(
+            (artwork_px, artwork_px), Image.Resampling.LANCZOS
         )
-        resized = source.resize(source_size, Image.Resampling.LANCZOS)
-        foreground = alpha_from_black(resized)
-        canvas = Image.new("RGBA", (layer_px, layer_px), (0, 0, 0, 0))
-        offset = (
-            round(layer_px / 2 - center[0] * source_scale),
-            round(layer_px / 2 - center[1] * source_scale),
-        )
+        canvas = Image.new("RGBA", (layer_px, layer_px), ADAPTIVE_BACKGROUND)
+        offset = ((layer_px - artwork_px) // 2,) * 2
         canvas.alpha_composite(foreground, offset)
         output = RES / f"mipmap-{density}" / "ic_launcher_foreground.png"
         canvas.save(output)
         print(f"wrote {output.relative_to(ROOT)}")
 
 
-def save_legacy(source):
+def save_monochrome(source):
+    for density, density_scale in DENSITIES.items():
+        layer_px = int(ADAPTIVE_LAYER_DP * density_scale)
+        artwork_px = int(ADAPTIVE_ARTWORK_DP * density_scale)
+        artwork = source.resize((artwork_px, artwork_px), Image.Resampling.LANCZOS)
+        monochrome = Image.new("RGBA", artwork.size, (255, 255, 255, 0))
+        source_pixels = artwork.load()
+        mono_pixels = monochrome.load()
+        for y in range(artwork.height):
+            for x in range(artwork.width):
+                r, g, b, source_alpha = source_pixels[x, y]
+                strongest = max(r, g, b)
+                if strongest <= MONO_TRANSPARENT_THRESHOLD:
+                    alpha = 0
+                elif strongest >= MONO_OPAQUE_THRESHOLD:
+                    alpha = source_alpha
+                else:
+                    alpha = round(
+                        source_alpha
+                        * (strongest - MONO_TRANSPARENT_THRESHOLD)
+                        / (MONO_OPAQUE_THRESHOLD - MONO_TRANSPARENT_THRESHOLD)
+                    )
+                mono_pixels[x, y] = (255, 255, 255, alpha)
+
+        canvas = Image.new("RGBA", (layer_px, layer_px), (0, 0, 0, 0))
+        offset = ((layer_px - artwork_px) // 2,) * 2
+        canvas.alpha_composite(monochrome, offset)
+        output = RES / f"mipmap-{density}" / "ic_launcher_monochrome.png"
+        canvas.save(output)
+        print(f"wrote {output.relative_to(ROOT)}")
+
+
+def save_bitmap_launcher(source):
     for density, density_scale in DENSITIES.items():
         size = int(48 * density_scale)
         output = RES / f"mipmap-{density}" / "ic_launcher.png"
-        source.resize((size, size), Image.Resampling.LANCZOS).convert("RGB").save(output)
+        source.resize((size, size), Image.Resampling.LANCZOS).save(output)
         print(f"wrote {output.relative_to(ROOT)}")
 
 
 def main():
-    source = Image.open(SOURCE).convert("RGB")
-    points = visible_points(source)
-    min_x = min(x for x, _ in points)
-    max_x = max(x for x, _ in points)
-    min_y = min(y for _, y in points)
-    max_y = max(y for _, y in points)
-    center = ((min_x + max_x + 1) / 2, (min_y + max_y + 1) / 2)
-    radius = max(hypot(x + 0.5 - center[0], y + 0.5 - center[1]) for x, y in points)
+    source = Image.open(SOURCE).convert("RGBA")
+    if source.width != source.height:
+        raise RuntimeError(f"{SOURCE} must be square, got {source.width}x{source.height}")
 
-    save_foreground(source, center, radius)
-    save_legacy(source)
+    save_foreground(source)
+    save_monochrome(source)
+    save_bitmap_launcher(source)
 
 
 if __name__ == "__main__":

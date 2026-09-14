@@ -11,12 +11,12 @@ for name in $required_vars; do
 	fi
 done
 
-keystore="$RUNNER_TEMP/tayd-release.jks"
+keystore="$RUNNER_TEMP/tayc-release.jks"
 printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode >"$keystore"
 
 {
-	echo "TAYD_KEYSTORE_FILE=$keystore"
-	echo "TAYD_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD"
-	echo "TAYD_KEY_ALIAS=$ANDROID_KEY_ALIAS"
-	echo "TAYD_KEY_PASSWORD=$ANDROID_KEY_PASSWORD"
+	echo "TAYC_KEYSTORE_FILE=$keystore"
+	echo "TAYC_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD"
+	echo "TAYC_KEY_ALIAS=$ANDROID_KEY_ALIAS"
+	echo "TAYC_KEY_PASSWORD=$ANDROID_KEY_PASSWORD"
 } >>"$GITHUB_ENV"

@@ -93,7 +93,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tayd"
+name = "tayc"
 version = "0.1.0"
 dependencies = [
  "qrcode",

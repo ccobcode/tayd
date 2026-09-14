@@ -321,13 +321,10 @@ pub(crate) fn infer_plugin(
 }
 
 pub(crate) fn proxy_types(proxy: &Proxy) -> Result<Vec<String>> {
-    if !proxy.types.is_empty() {
-        return parse_proxy_types(&proxy.types.join(","));
+    if proxy.types.is_empty() {
+        return Err(format!("proxy {} types are required", proxy.name).into());
     }
-    if let Some(proxy_type) = proxy.legacy_type.as_deref() {
-        return parse_proxy_types(proxy_type);
-    }
-    Ok(vec![String::from("tcp")])
+    parse_proxy_types(&proxy.types.join(","))
 }
 
 pub(crate) fn frp_proxy_name(proxy: &Proxy, proxy_type: &str, multi_type: bool) -> String {
