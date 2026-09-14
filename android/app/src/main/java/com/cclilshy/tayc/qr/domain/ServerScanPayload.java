@@ -32,9 +32,9 @@ public final class ServerScanPayload {
                 throw new IllegalArgumentException("unsupported payload");
             }
             Map<String, String> query = parseQuery(uri.getRawQuery());
-            String server = firstNonEmpty(query.get("addr"), query.get("server"));
+            String server = query.get("addr");
             String token = query.get("token");
-            if (server == null || token == null || token.trim().isEmpty()) {
+            if (server == null || server.trim().isEmpty() || token == null || token.trim().isEmpty()) {
                 throw new IllegalArgumentException("missing server config");
             }
             int port = parsePort(query.get("port"));
@@ -92,15 +92,5 @@ public final class ServerScanPayload {
         } catch (NumberFormatException err) {
             throw new IllegalArgumentException("invalid port", err);
         }
-    }
-
-    private static String firstNonEmpty(String first, String second) {
-        if (first != null && !first.trim().isEmpty()) {
-            return first;
-        }
-        if (second != null && !second.trim().isEmpty()) {
-            return second;
-        }
-        return null;
     }
 }

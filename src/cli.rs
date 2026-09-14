@@ -38,7 +38,7 @@ pub(crate) fn run_client() -> Result<()> {
         "restart" => cmd_restart(),
         "install" => start_process(&tayc_home()?, "frpc", &["-c", "frpc.toml"]),
         "service" => cmd_service(&rest),
-        "uninstall" => cmd_down(),
+        "uninstall" => cmd_uninstall(),
         "help" | "-h" | "--help" => {
             client_usage();
             Ok(())
@@ -64,7 +64,7 @@ pub(crate) fn run_server() -> Result<()> {
             stop_process(&home, "frps")?;
             start_process(&home, "frps", &["-c", "frps.toml"])
         }
-        "info" | "log" => cmd_server_info(),
+        "info" => cmd_server_info(),
         "help" | "-h" | "--help" => {
             server_usage();
             Ok(())
@@ -84,7 +84,7 @@ fn cmd_init_server(args: &[String]) -> Result<()> {
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
-            "--addr" | "--server" | "--server-addr" => {
+            "--addr" => {
                 addr = Some(option_value(args, i)?.to_owned());
                 i += 2;
             }
@@ -420,12 +420,12 @@ fn cmd_render() -> Result<()> {
     Ok(())
 }
 
-fn cmd_down() -> Result<()> {
+fn cmd_uninstall() -> Result<()> {
     let home = tayc_home()?;
-    let marker = home.join(".tayc-client");
-    if !marker.exists() && !env_flag("TAYC_FORCE_DOWN") {
+    let marker = home.join(".tayc");
+    if !marker.exists() && !env_flag("TAYC_FORCE_UNINSTALL") {
         return Err(format!(
-            "{} is not marked as a client install; set TAYC_FORCE_DOWN=1 to remove it anyway",
+            "{} is not marked as a client install; set TAYC_FORCE_UNINSTALL=1 to remove it anyway",
             home.display()
         )
         .into());

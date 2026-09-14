@@ -4,8 +4,8 @@
 
 | 命令 | 职责 | 安装脚本默认目录 |
 | --- | --- | --- |
-| `tayd` | 服务端，管理 `frps` | `~/.tayd-server` |
-| `tayc` | 客户端，管理 `frpc` 和端口映射 | `~/.tayc-client` |
+| `tayd` | 服务端，管理 `frps` | `~/.tayd` |
+| `tayc` | 客户端，管理 `frpc` 和端口映射 | `~/.tayc` |
 
 Android 客户端名为 **TayC**，内置 `frpc`、本地代理与事件转发模块。
 
@@ -16,13 +16,13 @@ Android 客户端名为 **TayC**，内置 `frpc`、本地代理与事件转发�
 将 `HOST` 替换为客户端可访问的服务器域名或 IP，默认连接端口为 `7000`：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/cclilshy/tayc/main/scripts/install-server.sh | sh -s -- HOST
+curl -fsSL https://raw.githubusercontent.com/ccobcode/tayd/main/scripts/install-server.sh | sh -s -- HOST
 ```
 
 需要按域名发布 HTTP/HTTPS 服务时，声明对应的服务端监听端口：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/cclilshy/tayc/main/scripts/install-server.sh | sh -s -- HOST --http-port 80 --https-port 443
+curl -fsSL https://raw.githubusercontent.com/ccobcode/tayd/main/scripts/install-server.sh | sh -s -- HOST --http-port 80 --https-port 443
 ```
 
 多个 HTTP/HTTPS 映射可以共享对应的监听端口，由 frp 按域名路由。
@@ -112,16 +112,15 @@ tayc service uninstall
 | SOCKS5 | 本机 SOCKS5 代理 |
 | Event Listener | 订阅来电、短信与应用通知事件 |
 
-构建、权限和运行配置见 [Android 文档](android/README.md)。
+Android 源码结构见 [Android 文档](android/README.md)。
 
-## 运行目录与版本迁移
+## 运行目录与配置
 
-- 安装脚本默认将服务端放在 `~/.tayd-server`，客户端放在 `~/.tayc-client`。
-- 直接运行二进制时，可通过 `TAYD_HOME` / `TAYC_HOME` 指定对应的运行目录；未设置时按二进制所在位置推导，而不是固定使用上述默认目录。
-- 客户端命令已从 `tayd add` 等切换为 `tayc add`；旧的 `up` / `down`、`init-server`、`server` 等命令不再使用。
-- 当前版本不自动迁移旧客户端目录、配置或旧名称的系统自启动项。
-- Android 应用标识已改为 `com.cclilshy.tayc`，与旧的 `com.cclilshy.tayd` 是独立应用，旧应用数据需单独迁移。
-- 服务端二维码协议已切换为 `tayc://server`，扫码时使用当前版本 `tayd info` 生成的二维码。
+- 安装脚本默认将服务端放在 `~/.tayd`，客户端放在 `~/.tayc`；可通过 `INSTALL_DIR` 指定安装目录。
+- 直接运行二进制时，可通过 `TAYD_HOME` / `TAYC_HOME` 指定对应的运行目录；未设置时按二进制所在位置推导。
+- 服务端通过 `server-install.json` 保存连接参数，重装时保留已保存的地址、Token 和端口；已有服务端配置缺少有效元数据时停止更新。
+- 客户端安装标记为 `.tayc`，卸载时校验该标记；显式强制卸载使用 `TAYC_FORCE_UNINSTALL=1`。
+- Android 应用标识为 `com.cclilshy.tayc`，二维码格式为 `tayc://server?addr=HOST&port=7000&token=TOKEN`，由 `tayd info` 生成。
 
 ## 停止与卸载
 
@@ -155,4 +154,4 @@ cargo test
 bash tests/tayd-tayc.sh
 ```
 
-多平台 CLI 构建使用 [build.sh](build.sh)，输出 `tayd-*` 和 `tayc-*` 两组二进制；Android 构建步骤见 [android/README.md](android/README.md)。
+多平台 CLI 构建使用 [build.sh](build.sh)，输出 `tayd-*` 和 `tayc-*` 两组二进制。

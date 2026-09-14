@@ -14,7 +14,7 @@ param(
     [int]$RemotePort = 0,
     [string]$InstallDir = "",
     [string]$BinDir = (Join-Path $HOME ".local\bin"),
-    [string]$RepoUrl = "https://github.com/cclilshy/tayc.git",
+    [string]$RepoUrl = "https://github.com/ccobcode/tayd.git",
     [string]$FrpVersion = "0.69.0",
     [switch]$SkipStart,
     [switch]$SkipFrpDownload
@@ -24,7 +24,7 @@ $ErrorActionPreference = "Stop"
 
 if ($env:INSTALL_DIR) { $InstallDir = $env:INSTALL_DIR }
 elseif ($InstallDir -eq "") {
-    $InstallDir = Join-Path $HOME ".tayc-client"
+    $InstallDir = Join-Path $HOME ".tayc"
 }
 if ($env:BIN_DIR) { $BinDir = $env:BIN_DIR }
 if ($env:REPO_URL) { $RepoUrl = $env:REPO_URL }
@@ -71,15 +71,9 @@ function Clone-Or-Update {
 
 function Select-TayCBinary {
     $arch = Get-TayCArch
-    $candidates = @(
-        (Join-Path $InstallDir "bin\tayc-windows-$arch.exe"),
-        (Join-Path $InstallDir "bin\tayc.exe")
-    )
-
-    foreach ($candidate in $candidates) {
-        if (Test-Path $candidate) {
-            return $candidate
-        }
+    $candidate = Join-Path $InstallDir "bin\tayc-windows-$arch.exe"
+    if (Test-Path $candidate -PathType Leaf) {
+        return $candidate
     }
 
     throw "no prebuilt tayc binary for windows-$arch; run ./build.sh before publishing"
@@ -157,7 +151,7 @@ if ($proxyConfigured) {
     & $taycBin @addArgs
 }
 
-New-Item -ItemType File -Force -Path (Join-Path $InstallDir ".tayc-client") | Out-Null
+New-Item -ItemType File -Force -Path (Join-Path $InstallDir ".tayc") | Out-Null
 $taycCmd = Install-TayCCommand $taycBin
 
 if (-not $SkipStart) {

@@ -10,8 +10,8 @@ die() {
 }
 
 case "$COMPONENT" in
-frpc) INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayc-client"} ;;
-frps) INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayd-server"} ;;
+frpc) INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayc"} ;;
+frps) INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayd"} ;;
 *) die "usage: install-frp.sh <frpc|frps>" ;;
 esac
 

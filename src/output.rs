@@ -9,7 +9,7 @@ use std::{
     io::{self, IsTerminal},
 };
 
-const DEFAULT_RAW_BASE_URL: &str = "https://raw.githubusercontent.com/cclilshy/tayc/main/scripts";
+const DEFAULT_RAW_BASE_URL: &str = "https://raw.githubusercontent.com/ccobcode/tayd/main/scripts";
 const TERMINAL_QR_QUIET_ZONE: isize = 4;
 const TERMINAL_QR_STYLE: &str = "\x1b[30;47m";
 const TERMINAL_QR_RESET: &str = "\x1b[0m";
@@ -310,7 +310,6 @@ Commands:
   tayd uninstall                            Stop the server gateway
   tayd restart                              Restart the server gateway
   tayd info                                 Show server token and client install commands
-  tayd log                                  Show server install log
 
 Init options:
   --port 7000                               frps bind port

@@ -32,6 +32,10 @@ assert_contains() {
 	grep -F "$text" "$file" >/dev/null 2>&1 || fail "$file does not contain: $text"
 }
 
+for installer in install-client.sh install-client.ps1 install-server.sh; do
+	assert_contains "$repo_root/scripts/$installer" 'https://github.com/ccobcode/tayd.git'
+done
+
 if grep -R "python3" "$repo_root/scripts" >/dev/null 2>&1; then
 	fail "runtime scripts must not require python3"
 fi
@@ -128,7 +132,9 @@ printf '%s\n' "$server_help" | grep -F 'tayd install' >/dev/null 2>&1 || fail "s
 printf '%s\n' "$server_help" | grep -F 'tayd uninstall' >/dev/null 2>&1 || fail "server help did not include uninstall"
 printf '%s\n' "$server_help" | grep -F 'tayd restart' >/dev/null 2>&1 || fail "server help did not include restart"
 printf '%s\n' "$server_help" | grep -F 'tayd info' >/dev/null 2>&1 || fail "server help did not include info"
-printf '%s\n' "$server_help" | grep -F 'tayd log' >/dev/null 2>&1 || fail "server help did not include log"
+if printf '%s\n' "$server_help" | grep -F 'tayd log' >/dev/null 2>&1; then
+	fail "server help still includes the log alias"
+fi
 if printf '%s\n' "$server_help" | grep -E 'tayc| add | remove | list ' >/dev/null 2>&1; then
 	fail "server help still includes client commands"
 fi
@@ -138,18 +144,28 @@ fi
 if "$server_bin" list >/dev/null 2>&1; then
 	fail "tayd accepted a client command"
 fi
-if printf '%s\n' "$help_output" | grep -F 'tayc up' >/dev/null 2>&1; then
-	fail "help still included up"
-fi
-if printf '%s\n' "$help_output" | grep -F 'tayc down' >/dev/null 2>&1; then
-	fail "help still included down"
-fi
-if printf '%s\n' "$help_output" | grep -F 'server-up' >/dev/null 2>&1; then
-	fail "help still included server-up"
-fi
-if printf '%s\n' "$help_output" | grep -F 'server-down' >/dev/null 2>&1; then
-	fail "help still included server-down"
-fi
+for command in up down init-server server; do
+	if TAYC_HOME="$tmp_dir/removed-commands" "$client_bin" "$command" >"$tmp_dir/removed-command.log" 2>&1; then
+		fail "tayc accepted removed command: $command"
+	fi
+	assert_contains "$tmp_dir/removed-command.log" "unknown command: $command"
+done
+for command in log server-up server-down; do
+	if TAYD_HOME="$tmp_dir/removed-commands" "$server_bin" "$command" >"$tmp_dir/removed-command.log" 2>&1; then
+		fail "tayd accepted removed command: $command"
+	fi
+	assert_contains "$tmp_dir/removed-command.log" "unknown command: $command"
+done
+for option in --server --server-addr; do
+	if TAYD_HOME="$tmp_dir/removed-options" "$server_bin" init --token test-token "$option" frp.example.com >"$tmp_dir/removed-option.log" 2>&1; then
+		fail "tayd accepted removed option: $option"
+	fi
+	assert_contains "$tmp_dir/removed-option.log" "unknown init option: $option"
+	if INSTALL_DIR="$tmp_dir/removed-options" REPO_URL="$tmp_dir/no-repository" sh "$repo_root/scripts/install-server.sh" "$option" frp.example.com >"$tmp_dir/removed-option.log" 2>&1; then
+		fail "server installer accepted removed option: $option"
+	fi
+	assert_contains "$tmp_dir/removed-option.log" "unknown option: $option"
+done
 add_line=$(printf '%s\n' "$help_output" | awk '/tayc add / { print NR; exit }')
 init_line=$(printf '%s\n' "$help_output" | awk '/tayc init --server/ { print NR; exit }')
 [ -n "$add_line" ] || fail "help did not include add"
@@ -166,6 +182,15 @@ assert_contains "$tmp_dir/tayc/frpc.toml" 'includes = ["frpc.d/*.toml"]'
 
 empty_list_output=$(TAYC_HOME="$tmp_dir/tayc" "$client_bin" list)
 printf '%s\n' "$empty_list_output" | grep -F 'no mappings' >/dev/null 2>&1 || fail "empty list did not report no mappings"
+
+mkdir -p "$tmp_dir/old-state"
+cat >"$tmp_dir/old-state/state.json" <<'EOF'
+{"version":1,"server":{"addr":"frp.example.com","port":7000,"token":"test-token"},"proxies":[{"name":"old","type":"tcp","local_ip":"127.0.0.1","local_port":8080,"remote_port":18080}]}
+EOF
+if TAYC_HOME="$tmp_dir/old-state" "$client_bin" list >"$tmp_dir/old-state.log" 2>&1; then
+	fail "state accepted the old type field instead of types"
+fi
+assert_contains "$tmp_dir/old-state.log" 'types are required'
 
 TAYC_HOME="$tmp_dir/tayc" "$client_bin" add web 8080 18080
 assert_contains "$tmp_dir/tayc/frpc.d/web.toml" 'name = "web"'
@@ -283,6 +308,22 @@ TAYC_HOME="$tmp_dir/tayc" "$client_bin" remove web
 [ ! -e "$tmp_dir/tayc/frpc.d/web.toml" ] || fail "remove did not delete web"
 [ -e "$tmp_dir/tayc/frpc.d/game.toml" ] || fail "remove deleted game"
 
+uninstall_home="$tmp_dir/uninstall-home"
+unmarked_dir="$tmp_dir/unmarked-client"
+mkdir -p "$uninstall_home" "$unmarked_dir"
+if HOME="$uninstall_home" TAYC_HOME="$unmarked_dir" "$client_bin" uninstall >"$tmp_dir/unmarked.log" 2>&1; then
+	fail "uninstall accepted an unmarked directory"
+fi
+assert_contains "$tmp_dir/unmarked.log" 'is not marked as a client install'
+touch "$unmarked_dir/.tayc-client"
+if HOME="$uninstall_home" TAYC_HOME="$unmarked_dir" TAYC_FORCE_DOWN=1 "$client_bin" uninstall >"$tmp_dir/old-marker.log" 2>&1; then
+	fail "uninstall accepted the old marker or force variable"
+fi
+assert_contains "$tmp_dir/old-marker.log" 'is not marked as a client install'
+[ -e "$unmarked_dir/.tayc-client" ] || fail "failed uninstall changed the directory"
+HOME="$uninstall_home" TAYC_HOME="$unmarked_dir" TAYC_FORCE_UNINSTALL=1 TAYC_SKIP_STOP=1 "$client_bin" uninstall
+[ ! -e "$unmarked_dir" ] || fail "explicit force uninstall did not remove the directory"
+
 service_home="$tmp_dir/service-home"
 mkdir -p "$service_home"
 HOME="$service_home" TAYC_HOME="$tmp_dir/tayc" TAYC_SERVICE_SKIP_ENABLE=1 "$client_bin" service install
@@ -310,16 +351,17 @@ printf '%s\n' "$server_info" | grep -F 'Server: frp.example.com:7000' >/dev/null
 printf '%s\n' "$server_info" | grep -F 'Token: server-token' >/dev/null 2>&1 || fail "server info did not include token"
 printf '%s\n' "$server_info" | grep -F 'QR payload: tayc://server?addr=frp.example.com&port=7000&token=server-token' >/dev/null 2>&1 || fail "server info did not include QR payload"
 printf '%s\n' "$server_info" | grep -F 'curl -fsSL https://example.com/scripts/install-client.sh | sh -s -- frp.example.com server-token' >/dev/null 2>&1 || fail "server info did not include client install command"
-server_log=$(TAYD_HOME="$tmp_dir/frps-info" "$server_bin" log)
-printf '%s\n' "$server_log" | grep -F 'Token: server-token' >/dev/null 2>&1 || fail "server log did not include token"
+TAYD_HOME="$tmp_dir/frps-default-url" "$server_bin" init --token server-token --addr frp.example.com
+default_info=$(TAYD_HOME="$tmp_dir/frps-default-url" "$server_bin" info)
+printf '%s\n' "$default_info" | grep -F 'https://raw.githubusercontent.com/ccobcode/tayd/main/scripts/install-client.sh' >/dev/null 2>&1 || fail "server info used an outdated default download URL"
 
 src="$tmp_dir/source"
 home="$tmp_dir/home"
 install_dir="$tmp_dir/install"
 bin_dir="$home/.local/bin"
 mkdir -p "$src" "$home"
-cp -R "$repo_root/." "$src"
-rm -rf "$src/.git"
+cp -R "$repo_root/src" "$repo_root/scripts" "$repo_root/templates" "$repo_root/bin" \
+	"$repo_root/Cargo.toml" "$repo_root/Cargo.lock" "$repo_root/build.sh" "$repo_root/.gitignore" "$src"
 (cd "$src" && cargo build --target-dir "$tmp_dir/source-target" >/tmp/tayc-source-cargo-build.log)
 mkdir -p "$src/bin"
 platform_suffix=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
@@ -340,7 +382,9 @@ git -C "$src" -c user.name=test -c user.email=test@example.com commit -q -m init
 
 default_home="$tmp_dir/default-home"
 default_bin_dir="$default_home/.local/bin"
-mkdir -p "$default_home"
+mkdir -p "$default_home/.tayc-client" "$default_home/.tayd-server"
+printf '%s\n' 'untouched client' >"$default_home/.tayc-client/state.json"
+printf '%s\n' 'untouched server' >"$default_home/.tayd-server/frps.toml"
 
 HOME="$default_home" \
 	BIN_DIR="$default_bin_dir" \
@@ -349,8 +393,8 @@ HOME="$default_home" \
 	SKIP_FRP_DOWNLOAD=1 \
 	sh "$repo_root/scripts/install-client.sh" 198.51.100.10 default-token >/tmp/tayc-default-client.log
 
-default_client_dir="$default_home/.tayc-client"
-[ -e "$default_client_dir/.tayc-client" ] || fail "default client install marker was not created"
+default_client_dir="$default_home/.tayc"
+[ -e "$default_client_dir/.tayc" ] || fail "default client install marker was not created"
 assert_contains "$default_client_dir/frpc.toml" 'serverAddr = "198.51.100.10"'
 [ ! -e "$default_client_dir/frpc.d/ssh.toml" ] || fail "default client install created a default ssh mapping"
 default_client_list=$(HOME="$default_home" "$default_bin_dir/tayc" list)
@@ -363,14 +407,16 @@ HOME="$default_home" \
 	SKIP_FRP_DOWNLOAD=1 \
 	sh "$repo_root/scripts/install-server.sh" frp.default.example >"/tmp/tayc-default-server.log"
 
-default_server_dir="$default_home/.tayd-server"
-[ -e "$default_server_dir/.tayd-server" ] || fail "default server install marker was not created"
+default_server_dir="$default_home/.tayd"
 assert_contains "$default_server_dir/frps.toml" 'auth.token = '
+assert_contains "$default_server_dir/server-install.json" 'https://raw.githubusercontent.com/ccobcode/tayd/main/scripts'
 [ -x "$default_bin_dir/tayd" ] || fail "default server installer did not create tayd command"
 [ -x "$default_bin_dir/tayc" ] || fail "client command disappeared after server install"
 [ -e "$default_client_dir/frpc.toml" ] || fail "default server install clobbered client config"
-[ ! -e "$default_home/.tayc" ] || fail "default installers wrote to shared ~/.tayc"
-[ ! -e "$default_home/.tayd" ] || fail "default installers wrote to shared ~/.tayd"
+assert_contains "$default_home/.tayc-client/state.json" 'untouched client'
+assert_contains "$default_home/.tayd-server/frps.toml" 'untouched server'
+[ ! -e "$default_home/.tayc-client/.tayc" ] || fail "default installer reused the old client directory"
+[ ! -e "$default_home/.tayd-server/server-install.json" ] || fail "default installer migrated the old server directory"
 
 HOME="$home" \
 	INSTALL_DIR="$install_dir" \
@@ -434,14 +480,20 @@ assert_contains "$server_output" "Windows PowerShell:"
 assert_contains "$server_output" "Invoke-RestMethod 'https://example.com/scripts/install-client.ps1'"
 assert_contains "$server_output" "initialized server"
 
+TAYD_HOME="$server_dir" "$server_bin" init --token "$server_token" --addr saved.example.com \
+	--port 7443 --http-port 8081 --https-port 8444 --raw-base-url https://example.com/scripts
 RAW_BASE_URL="https://example.com/scripts" \
 	REPO_URL="$src" \
 	INSTALL_DIR="$server_dir" \
 	SKIP_START=1 \
 	SKIP_FRP_DOWNLOAD=1 \
-	sh "$repo_root/scripts/install-server.sh" frp.example.com --http-port 8080 --https-port 8443 >"$tmp_dir/server-update.out"
+	sh "$repo_root/scripts/install-server.sh" >"$tmp_dir/server-update.out"
 updated_server_token=$(sed -n 's/^Token: //p' "$tmp_dir/server-update.out")
 [ "$updated_server_token" = "$server_token" ] || fail "server update did not preserve token"
+assert_contains "$server_dir/server-install.json" '"addr": "saved.example.com"'
+assert_contains "$server_dir/frps.toml" 'bindPort = 7443'
+assert_contains "$server_dir/frps.toml" 'vhostHTTPPort = 8081'
+assert_contains "$server_dir/frps.toml" 'vhostHTTPSPort = 8444'
 
 running_server_dir="$tmp_dir/server-running"
 RAW_BASE_URL="https://example.com/scripts" \
@@ -469,5 +521,48 @@ RAW_BASE_URL="https://example.com/scripts" \
 	sh "$repo_root/scripts/install-server.sh" environment.example >/tmp/tayc-environment-server.out
 assert_contains "$environment_server_dir/frps.toml" 'vhostHTTPPort = 8081'
 assert_contains "$environment_server_dir/frps.toml" 'vhostHTTPSPort = 8444'
+
+cp "$server_dir/frps.toml" "$tmp_dir/saved-frps.toml"
+cp "$server_dir/server-install.json" "$tmp_dir/saved-server-install.json"
+for metadata in missing malformed missing-port empty-token; do
+	case "$metadata" in
+	missing) rm "$server_dir/server-install.json" ;;
+	malformed) printf '%s\n' '{"addr":"saved.example.com","port":7443,"token":"unchanged"' >"$server_dir/server-install.json" ;;
+	missing-port) printf '%s\n' '{"addr":"saved.example.com","token":"unchanged"}' >"$server_dir/server-install.json" ;;
+	empty-token) printf '%s\n' '{"addr":"saved.example.com","port":7443,"token":""}' >"$server_dir/server-install.json" ;;
+	esac
+	if [ -e "$server_dir/server-install.json" ]; then
+		cp "$server_dir/server-install.json" "$tmp_dir/invalid-server-install.json"
+	fi
+	if REPO_URL="$src" INSTALL_DIR="$server_dir" BIN_DIR="$bin_dir" SKIP_START=1 SKIP_FRP_DOWNLOAD=1 \
+		sh "$repo_root/scripts/install-server.sh" frp.example.com >"$tmp_dir/metadata-$metadata.log" 2>&1; then
+		fail "server installer accepted $metadata metadata"
+	fi
+	cmp "$tmp_dir/saved-frps.toml" "$server_dir/frps.toml" || fail "invalid metadata caused server config to change"
+	if [ "$metadata" = missing ]; then
+		assert_contains "$tmp_dir/metadata-$metadata.log" 'server-install.json is required'
+		[ ! -e "$server_dir/server-install.json" ] || fail "server installer migrated a TOML-only install"
+	else
+		assert_contains "$tmp_dir/metadata-$metadata.log" 'invalid server metadata'
+		cmp "$tmp_dir/invalid-server-install.json" "$server_dir/server-install.json" || fail "invalid metadata was overwritten"
+	fi
+	cp "$tmp_dir/saved-server-install.json" "$server_dir/server-install.json"
+done
+
+generic_src="$tmp_dir/generic-source"
+git clone -q "$src" "$generic_src"
+for product in tayc tayd; do
+	mv "$generic_src/bin/$product-$platform_suffix" "$generic_src/bin/$product"
+done
+git -C "$generic_src" add -A
+git -C "$generic_src" -c user.name=test -c user.email=test@example.com commit -q -m generic-artifacts
+for component in client server; do
+	if HOME="$home" REPO_URL="$generic_src" INSTALL_DIR="$tmp_dir/generic-$component" BIN_DIR="$bin_dir" \
+		SERVER_ADDR=frp.example.com TOKEN=test-token SKIP_START=1 SKIP_FRP_DOWNLOAD=1 \
+		sh "$repo_root/scripts/install-$component.sh" >"$tmp_dir/generic-$component.log" 2>&1; then
+		fail "$component installer accepted a generic binary"
+	fi
+	assert_contains "$tmp_dir/generic-$component.log" 'no prebuilt'
+done
 
 echo "tayd and tayc tests passed"

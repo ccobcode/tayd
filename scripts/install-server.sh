@@ -1,9 +1,9 @@
 #!/bin/sh
 set -eu
 
-REPO_URL=${REPO_URL:-https://github.com/cclilshy/tayc.git}
-RAW_BASE_URL=${RAW_BASE_URL:-https://raw.githubusercontent.com/cclilshy/tayc/main/scripts}
-INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayd-server"}
+REPO_URL=${REPO_URL:-https://github.com/ccobcode/tayd.git}
+RAW_BASE_URL=${RAW_BASE_URL:-https://raw.githubusercontent.com/ccobcode/tayd/main/scripts}
+INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayd"}
 SERVER_PORT_EXPLICIT=0
 [ -n "${SERVER_PORT:-}" ] && SERVER_PORT_EXPLICIT=1
 SERVER_PORT=${SERVER_PORT:-7000}
@@ -38,7 +38,7 @@ usage() {
 parse_args() {
     while [ "$#" -gt 0 ]; do
         case "$1" in
-            --server|--server-addr|--addr)
+            --addr)
                 [ "$#" -ge 2 ] || die "missing value for $1"
                 SERVER_ADDR=$2
                 SERVER_ADDR_EXPLICIT=1
@@ -152,29 +152,16 @@ json_number() {
     sed -n "s/.*\"$key\"[[:space:]]*:[[:space:]]*\\([0-9][0-9]*\\).*/\\1/p" "$file" | sed -n '1p'
 }
 
-frps_token() {
-    file="$INSTALL_DIR/frps.toml"
-    [ -f "$file" ] || return 0
-    sed -n 's/^[[:space:]]*auth\.token[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$file" | sed -n '1p'
-}
-
-frps_bind_port() {
-    file="$INSTALL_DIR/frps.toml"
-    [ -f "$file" ] || return 0
-    sed -n 's/^[[:space:]]*bindPort[[:space:]]*=[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$file" | sed -n '1p'
-}
-
 existing_server_info() {
     info_file="$INSTALL_DIR/server-install.json"
-    EXISTING_TOKEN=$(json_string token "$info_file")
-    if [ -z "$EXISTING_TOKEN" ]; then
-        EXISTING_TOKEN=$(frps_token)
+    if [ ! -e "$info_file" ]; then
+        [ ! -e "$INSTALL_DIR/frps.toml" ] || die "$info_file is required for an existing server install"
+        return
     fi
+    TAYD_HOME="$INSTALL_DIR" "$TAYD_BIN" info >/dev/null || die "invalid server metadata: $info_file"
+    EXISTING_TOKEN=$(json_string token "$info_file")
     EXISTING_ADDR=$(json_string addr "$info_file")
     EXISTING_SERVER_PORT=$(json_number port "$info_file")
-    if [ -z "$EXISTING_SERVER_PORT" ]; then
-        EXISTING_SERVER_PORT=$(frps_bind_port)
-    fi
     EXISTING_HTTP_PORT=$(json_number http_port "$info_file")
     EXISTING_HTTPS_PORT=$(json_number https_port "$info_file")
 }
@@ -198,16 +185,9 @@ tayd_target() {
 
 select_tayd_binary() {
     target=$(tayd_target)
-    for candidate in \
-        "$INSTALL_DIR/bin/tayd-$target" \
-        "$INSTALL_DIR/bin/tayd"; do
-        if [ -x "$candidate" ]; then
-            printf '%s\n' "$candidate"
-            return
-        fi
-    done
-
-    die "no prebuilt tayd binary for $target; run ./build.sh before publishing"
+    candidate="$INSTALL_DIR/bin/tayd-$target"
+    [ -x "$candidate" ] || die "no prebuilt tayd binary for $target; run ./build.sh before publishing"
+    printf '%s\n' "$candidate"
 }
 
 install_tayd_command() {
@@ -225,8 +205,9 @@ install_tayd_command() {
 }
 
 parse_args "$@"
-existing_server_info
 clone_or_update
+TAYD_BIN=$(select_tayd_binary)
+existing_server_info
 
 if [ -z "$TOKEN" ]; then
     TOKEN=${EXISTING_TOKEN:-}
@@ -249,7 +230,6 @@ if [ "$HTTPS_PORT_EXPLICIT" != "1" ] && [ -n "${EXISTING_HTTPS_PORT:-}" ]; then
     HTTPS_PORT=$EXISTING_HTTPS_PORT
 fi
 
-TAYD_BIN=$(select_tayd_binary)
 INSTALL_DIR="$INSTALL_DIR" "$INSTALL_DIR/scripts/install-frp.sh" frps
 install_tayd_command "$TAYD_BIN"
 set -- init --token "$TOKEN" --port "$SERVER_PORT" --addr "$addr" --raw-base-url "$RAW_BASE_URL"
@@ -260,7 +240,6 @@ if [ -n "$HTTPS_PORT" ]; then
 	set -- "$@" --https-port "$HTTPS_PORT"
 fi
 "$TAYD_BIN" "$@"
-touch "$INSTALL_DIR/.tayd-server"
 
 if [ "$SKIP_START" != "1" ]; then
 	"$TAYD_BIN" restart

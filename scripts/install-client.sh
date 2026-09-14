@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-REPO_URL=${REPO_URL:-https://github.com/cclilshy/tayc.git}
-INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayc-client"}
+REPO_URL=${REPO_URL:-https://github.com/ccobcode/tayd.git}
+INSTALL_DIR=${INSTALL_DIR:-"$HOME/.tayc"}
 BIN_DIR=${BIN_DIR:-"$HOME/.local/bin"}
 SERVER_ADDR=${1:-${SERVER_ADDR:-}}
 TOKEN=${2:-${TOKEN:-}}
@@ -51,16 +51,9 @@ tayc_target() {
 
 select_tayc_binary() {
 	target=$(tayc_target)
-	for candidate in \
-		"$INSTALL_DIR/bin/tayc-$target" \
-		"$INSTALL_DIR/bin/tayc"; do
-		if [ -x "$candidate" ]; then
-			printf '%s\n' "$candidate"
-			return
-		fi
-	done
-
-	die "no prebuilt tayc binary for $target; run ./build.sh before publishing"
+	candidate="$INSTALL_DIR/bin/tayc-$target"
+	[ -x "$candidate" ] || die "no prebuilt tayc binary for $target; run ./build.sh before publishing"
+	printf '%s\n' "$candidate"
 }
 
 install_tayc_command() {
@@ -112,7 +105,7 @@ if [ -n "$PROXY_NAME" ] || [ -n "$LOCAL_ENDPOINT" ] || [ -n "$LOCAL_PORT" ] || [
 	proxy_configured=1
 fi
 
-touch "$INSTALL_DIR/.tayc-client"
+touch "$INSTALL_DIR/.tayc"
 install_tayc_command "$TAYC_BIN"
 
 if [ "$SKIP_START" != "1" ]; then
